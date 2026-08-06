@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
 import { Plus, Edit2, Trash2, Save, X, Download, Upload, Calendar, Info, ExternalLink } from 'lucide-react'
+import { saveChamados } from '../services/api' // <-- Importado para salvar no servidor Linux[cite: 2]
 
 // Função para calcular horas trabalhadas
 const calcularHoras = (checkin, checkout) => {
@@ -155,16 +156,20 @@ function Extrato({ atendimentos: propAtendimentos = [], setAtendimentos: setProp
     linkElement.click()
   }
 
+  // Função de importação corrigida para enviar os dados ao servidor Linux[cite: 2]
   const handleImportar = (event) => {
     const file = event.target.files[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const importedData = JSON.parse(e.target.result)
         if (Array.isArray(importedData)) {
           setLocalAtendimentos(importedData)
-          alert('Dados importados com sucesso!')
+          await saveChamados(importedData) // <-- Sincroniza e salva no servidor Linux[cite: 2]
+          alert('Dados importados e sincronizados com sucesso!')
+        } else {
+          alert('O arquivo JSON precisa conter uma lista (array) de atendimentos.')
         }
       } catch (error) {
         alert('Erro ao ler o arquivo: ' + error.message)
