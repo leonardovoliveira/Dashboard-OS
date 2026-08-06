@@ -13,7 +13,7 @@ app.use(cors());
 app.use(express.json());
 
 // Caminho onde o arquivo de dados JSON será salvo no seu servidor Linux
-const DATA_FILE = path.join(__dirname, 'chamados.json');
+const DATA_FILE = process.env.DATA_PATH || path.join(__dirname, 'chamados.json');
 
 // Rota para buscar os chamados
 app.get('/api/chamados', (req, res) => {
