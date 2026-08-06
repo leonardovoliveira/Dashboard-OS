@@ -258,4 +258,4 @@ function Extrato({ atendimentos = [], setAtendimentos }) {
   )
 }
 
-exports default Extrato; // (Mantenha export default Extrato)
+export default Extrato; // (Mantenha export default Extrato)
