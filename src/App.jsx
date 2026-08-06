@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import { getChamados, saveChamados } from './services/api' //
+import { getChamados, saveChamados } from './services/api'
 
 import './App.css'
 
@@ -111,6 +111,7 @@ function App() {
   const [darkMode, setDarkMode] = useState(true)
   const [isModalNovoAberto, setIsModalNovoAberto] = useState(false)
   const [notificacaoAtraso, setNotificacaoAtraso] = useState(0)
+  const [dadosCarregados, setDadosCarregados] = useState(false) // Controle para evitar salvamento prematuro
   const [novoAtendimento, setNovoAtendimento] = useState({
     data_atendimento: '',
     checkin: '',
@@ -151,16 +152,19 @@ function App() {
   // Carregar dados da API do Servidor Linux ao iniciar
   useEffect(() => {
     getChamados().then(data => {
-      if (data) setAtendimentos(data);
+      if (data && Array.isArray(data)) {
+        setAtendimentos(data);
+      }
+      setDadosCarregados(true); // Libera o salvamento automático após carregar do servidor
     });
   }, [])
 
-  // Salvar dados no Servidor Linux sempre que houver alteração nos atendimentos[cite: 1]
+  // Salvar dados no Servidor Linux apenas após os dados iniciais terem sido carregados
   useEffect(() => {
-    if (atendimentos.length >= 0) {
+    if (dadosCarregados) {
       saveChamados(atendimentos);
     }
-  }, [atendimentos])
+  }, [atendimentos, dadosCarregados])
 
   // Verificação automática de pagamentos atrasados
   useEffect(() => {
@@ -255,15 +259,15 @@ function App() {
               </div>
               <div className="space-y-2">
                 <Label>Número da OS</Label>
-                <Input placeholder="Ex: 123456" value={novoAtendimento.numero_os} onChange={(e) => setNovoAtendimento({ ...novoAtendimento, numero_os: e.target.value })} />
+                <Input placeholder="Ex: 123456" value={novoAtendimento.numero_os} onChange={(e) => setNovoAtendimento({ ...novo_atendimento, numero_os: e.target.value })} />
               </div>
               <div className="space-y-2">
                 <Label>Nome do Cliente</Label>
-                <Input placeholder="Nome do cliente ou local" value={novoAtendimento.nome_cliente} onChange={(e) => setNovoAtendimento({ ...novoAtendimento, nome_cliente: e.target.value })} />
+                <Input placeholder="Nome do cliente ou local" value={novoAtendimento.nome_cliente} onChange={(e) => setNovoAtendimento({ ...novo_atendimento, nome_cliente: e.target.value })} />
               </div>
               <div className="space-y-2">
                 <Label>Plataforma</Label>
-                <Select value={novoAtendimento.plataforma} onValueChange={(v) => setNovoAtendimento({ ...novoAtendimento, plataforma: v })}>
+                <Select value={novoAtendimento.plataforma} onValueChange={(v) => setNovoAtendimento({ ...novo_atendimento, plataforma: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>{plataformas.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}</SelectContent>
                 </Select>
@@ -271,42 +275,42 @@ function App() {
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-2">
                   <Label>Check-in</Label>
-                  <Input type="time" value={novoAtendimento.checkin} onChange={(e) => setNovoAtendimento({ ...novoAtendimento, checkin: e.target.value })} />
+                  <Input type="time" value={novoAtendimento.checkin} onChange={(e) => setNovoAtendimento({ ...novo_atendimento, checkin: e.target.value })} />
                 </div>
                 <div className="space-y-2">
                   <Label>Check-out</Label>
-                  <Input type="time" value={novoAtendimento.checkout} onChange={(e) => setNovoAtendimento({ ...novoAtendimento, checkout: e.target.value })} />
+                  <Input type="time" value={novoAtendimento.checkout} onChange={(e) => setNovoAtendimento({ ...novo_atendimento, checkout: e.target.value })} />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label>Previsão de Pagamento</Label>
-                <Input type="date" value={novoAtendimento.data_prevista_pagamento} onChange={(e) => setNovoAtendimento({ ...novoAtendimento, data_prevista_pagamento: e.target.value })} />
+                <Input type="date" value={novoAtendimento.data_prevista_pagamento} onChange={(e) => setNovoAtendimento({ ...novo_atendimento, data_prevista_pagamento: e.target.value })} />
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-2">
                   <Label>Valor Chamado</Label>
-                  <Input type="number" value={novoAtendimento.valor_chamado} onChange={(e) => setNovoAtendimento({ ...novoAtendimento, valor_chamado: e.target.value })} />
+                  <Input type="number" value={novoAtendimento.valor_chamado} onChange={(e) => setNovoAtendimento({ ...novo_atendimento, valor_chamado: e.target.value })} />
                 </div>
                 <div className="space-y-2">
                   <Label>Ganhos Extras</Label>
-                  <Input type="number" value={novoAtendimento.ganhos_adicionais} onChange={(e) => setNovoAtendimento({ ...novoAtendimento, ganhos_adicionais: e.target.value })} />
+                  <Input type="number" value={novoAtendimento.ganhos_adicionais} onChange={(e) => setNovoAtendimento({ ...novo_atendimento, ganhos_adicionais: e.target.value })} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-2">
                   <Label>Despesas OS</Label>
-                  <Input type="number" value={novoAtendimento.despesas_os} onChange={(e) => setNovoAtendimento({ ...novoAtendimento, despesas_os: e.target.value })} />
+                  <Input type="number" value={novoAtendimento.despesas_os} onChange={(e) => setNovoAtendimento({ ...novo_atendimento, despesas_os: e.target.value })} />
                 </div>
                 <div className="space-y-2">
                   <Label>Adiantamento</Label>
-                  <Input type="number" value={novoAtendimento.adiantamento_recebido} onChange={(e) => setNovoAtendimento({ ...novoAtendimento, adiantamento_recebido: e.target.value })} />
+                  <Input type="number" value={novoAtendimento.adiantamento_recebido} onChange={(e) => setNovoAtendimento({ ...novo_atendimento, adiantamento_recebido: e.target.value })} />
                 </div>
               </div>
               <div className="space-y-2 md:col-span-2">
                 <Label>Status Inicial</Label>
-                <Select value={novoAtendimento.status} onValueChange={(v) => setNovoAtendimento({ ...novoAtendimento, status: v })}>
+                <Select value={novoAtendimento.status} onValueChange={(v) => setNovoAtendimento({ ...novo_atendimento, status: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{statusOpcoes.pop ? statusOpcoes.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>) : null}</SelectContent>
+                  <SelectContent>{statusOpcoes.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
             </div>
