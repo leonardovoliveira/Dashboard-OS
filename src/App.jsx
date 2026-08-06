@@ -158,7 +158,7 @@ function App() {
   }, [])
 
   // Função centralizada para atualizar e salvar imediatamente na API do Servidor Linux
-  const atualizarE Salvar = async (novosDados) => {
+  const atualizarESalvar = async (novosDados) => {
     setAtendimentos(novosDados);
     await saveChamados(novosDados);
   };
@@ -184,7 +184,7 @@ function App() {
     });
 
     if (houveMudanca) {
-      atualizarE Salvar(novosAtendimentos);
+      atualizarESalvar(novosAtendimentos);
       setNotificacaoAtraso(atendimentos.filter(a => a.status === 'Pagamento Atrasado').length);
     }
   }, [dadosCarregados]);
@@ -197,7 +197,7 @@ function App() {
     const atendimento = { ...novoAtendimento, id: Date.now().toString() }
     const atualizados = [...atendimentos, atendimento];
     
-    await atualizarE Salvar(atualizados);
+    await atualizarESalvar(atualizados);
     
     setNovoAtendimento({
       data_atendimento: '', checkin: '', checkout: '', numero_os: '', nome_cliente: '',
@@ -237,7 +237,7 @@ function App() {
         <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
           <Routes>
             <Route path="/" element={<Dashboard atendimentos={atendimentos} />} />
-            <Route path="/extrato" element={<Extrato atendimentos={atendimentos} setAtendimentos={atualizarE Salvar} />} />
+            <Route path="/extrato" element={<Extrato atendimentos={atendimentos} setAtendimentos={atualizarESalvar} />} />
             <Route path="/relatorios" element={<Relatorios atendimentos={atendimentos} />} />
           </Routes>
         </main>
