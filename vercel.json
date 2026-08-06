@@ -1,0 +1,13 @@
+{
+  "build": {
+    "env": {
+      "VITE_APP_BASE_URL": "/"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
