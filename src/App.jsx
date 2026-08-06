@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
+import { getChamados, saveChamados } from './services/api' //
 
 import './App.css'
 
@@ -147,17 +148,18 @@ function App() {
     setDarkMode(!darkMode)
   }
 
-  // Carregar dados do localStorage ao iniciar
+  // Carregar dados da API do Servidor Linux ao iniciar
   useEffect(() => {
-    const savedData = localStorage.getItem('atendimentos')
-    if (savedData) {
-      setAtendimentos(JSON.parse(savedData));
-    }
+    getChamados().then(data => {
+      if (data) setAtendimentos(data);
+    });
   }, [])
 
-  // Salvar dados no localStorage sempre que houver alteração
+  // Salvar dados no Servidor Linux sempre que houver alteração nos atendimentos[cite: 1]
   useEffect(() => {
-    localStorage.setItem("atendimentos", JSON.stringify(atendimentos));
+    if (atendimentos.length >= 0) {
+      saveChamados(atendimentos);
+    }
   }, [atendimentos])
 
   // Verificação automática de pagamentos atrasados
@@ -184,7 +186,7 @@ function App() {
       setAtendimentos(novosAtendimentos);
       setNotificacaoAtraso(novosAtrasos);
     }
-  }, [atendimentos.length]); // Executa quando a lista é carregada ou alterada em tamanho
+  }, [atendimentos.length]);
 
   const handleAdicionar = () => {
     if (!novoAtendimento.data_atendimento || !novoAtendimento.numero_os) {
@@ -192,7 +194,9 @@ function App() {
       return
     }
     const atendimento = { ...novoAtendimento, id: Date.now().toString() }
-    setAtendimentos([...atendimentos, atendimento])
+    const atualizados = [...atendimentos, atendimento];
+    setAtendimentos(atualizados)
+    
     setNovoAtendimento({
       data_atendimento: '', checkin: '', checkout: '', numero_os: '', nome_cliente: '',
       plataforma: plataformas[0], data_prevista_pagamento: '', valor_chamado: '0',
@@ -302,7 +306,7 @@ function App() {
                 <Label>Status Inicial</Label>
                 <Select value={novoAtendimento.status} onValueChange={(v) => setNovoAtendimento({ ...novoAtendimento, status: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>{statusOpcoes.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                  <SelectContent>{statusOpcoes.pop ? statusOpcoes.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>) : null}</SelectContent>
                 </Select>
               </div>
             </div>
