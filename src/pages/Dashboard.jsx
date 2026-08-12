@@ -1,10 +1,44 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Component, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Calendar, TrendingUp, DollarSign, Clock, ChevronLeft, ChevronRight, Info, AlertTriangle } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 
 const DashboardCharts = lazy(() => import('@/components/DashboardCharts'))
+
+class DashboardChartsErrorBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.tipo !== this.props.tipo && this.state.hasError) {
+      this.setState({ hasError: false })
+    }
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Card className="dashboard-analytics-card">
+          <CardHeader>
+            <CardTitle>{this.props.titulo}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex min-h-[220px] items-center justify-center">
+            <p className="text-center text-sm text-muted-foreground">Não foi possível carregar este gráfico agora. Os demais dados do Dashboard continuam disponíveis.</p>
+          </CardContent>
+        </Card>
+      )
+    }
+
+    return this.props.children
+  }
+}
 
 function ChartLoadingPlaceholder({ tipo }) {
   if (tipo === 'plataforma') {
@@ -67,14 +101,16 @@ function DeferredDashboardCharts({ tipo, faturamentoPorPlataforma, dadosMensais,
   return (
     <div ref={containerRef}>
       {deveCarregar ? (
-        <Suspense fallback={placeholder}>
-          <DashboardCharts
-            tipo={tipo}
-            faturamentoPorPlataforma={faturamentoPorPlataforma}
-            dadosMensais={dadosMensais}
-            anoExibicao={anoExibicao}
-          />
-        </Suspense>
+        <DashboardChartsErrorBoundary tipo={tipo} titulo={tipo === 'plataforma' ? 'Faturamento por Plataforma' : 'Faturamento Mensal'}>
+          <Suspense fallback={placeholder}>
+            <DashboardCharts
+              tipo={tipo}
+              faturamentoPorPlataforma={faturamentoPorPlataforma}
+              dadosMensais={dadosMensais}
+              anoExibicao={anoExibicao}
+            />
+          </Suspense>
+        </DashboardChartsErrorBoundary>
       ) : placeholder}
     </div>
   )
