@@ -1,17 +1,45 @@
-import { useState, useEffect } from 'react'
+import { createElement, lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom'
-import { Home, FileText, BarChart3, Sun, Moon, Plus, AlertTriangle, X } from 'lucide-react'
-import Dashboard from './pages/Dashboard'
-import Extrato from './pages/Extrato'
-import Relatorios from './pages/Relatorios'
+import { Home, FileText, BarChart3, Sun, Moon, Plus, AlertTriangle, X, Menu, ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import { getChamados, saveChamados } from './services/api'; cite: 1
+import { getChamados, saveChamados } from './services/api'
 
 import './App.css'
+
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const Extrato = lazy(() => import('./pages/Extrato'))
+const Relatorios = lazy(() => import('./pages/Relatorios'))
+
+function PageLoadingFallback() {
+  return (
+    <div className="space-y-4" role="status" aria-live="polite" aria-label="Carregando página">
+      <div className="h-8 w-48 animate-pulse rounded-md bg-muted" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {[1, 2, 3].map((item) => <div key={item} className="h-32 animate-pulse rounded-lg bg-muted" />)}
+      </div>
+    </div>
+  )
+}
+
+function AnimatedRoutes({ atendimentos, setAtendimentos }) {
+  const location = useLocation()
+
+  return (
+    <div key={location.pathname} className="page-transition">
+      <Suspense fallback={<PageLoadingFallback />}>
+        <Routes location={location}>
+          <Route path="/" element={<Dashboard atendimentos={atendimentos} />} />
+          <Route path="/extrato" element={<Extrato atendimentos={atendimentos} setAtendimentos={setAtendimentos} />} />
+          <Route path="/relatorios" element={<Relatorios atendimentos={atendimentos} />} />
+        </Routes>
+      </Suspense>
+    </div>
+  )
+}
 
 const plataformas = ['FINDUP', 'EUNERD', 'QUALLITY', 'NS SUPORTE', 'ONIX SUPORTE', 'CO&BE', 'LVO TI']
 const statusOpcoes = [
@@ -27,82 +55,122 @@ const statusOpcoes = [
 
 function Navigation({ toggleDarkMode, darkMode, onNovoChamado }) {
   const location = useLocation()
-  
-  const isActive = (path) => {
-    return location.pathname === path
-  }
+  const [menuAberto, setMenuAberto] = useState(false)
+
+  const itensNavegacao = [
+    { path: '/', label: 'Visão geral', icon: Home },
+    { path: '/extrato', label: 'Atendimentos', icon: FileText },
+    { path: '/relatorios', label: 'Relatórios', icon: BarChart3 }
+  ]
+
+  const isActive = (path) => location.pathname === path
+
+  const LinksNavegacao = ({ onNavigate = () => {} }) => (
+    <>
+      <p className="mb-2 px-3 text-[10px] font-bold tracking-[0.16em] text-[#69769f]">OPERACIONAL</p>
+      {itensNavegacao.map(({ path, label, icon }) => (
+        <Link
+          key={path}
+          to={path}
+          onClick={onNavigate}
+          className={`app-nav-link mb-1 flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-all ${
+            isActive(path) ? 'app-nav-link-active' : ''
+          }`}
+        >
+          {createElement(icon, { className: 'h-4 w-4' })}
+          {label}
+        </Link>
+      ))}
+    </>
+  )
 
   return (
-      <nav className="bg-background border-b border-border shadow-sm sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16">
-          <div className="flex">
-            <div className="flex-shrink-0 flex items-center">
-              <Link to="/" className="text-xl font-bold text-foreground hover:text-blue-500 transition-colors">LVO TI</Link>
-            </div>
-            <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
-              <button
-                onClick={toggleDarkMode}
-                className="inline-flex items-center px-3 transition-colors text-muted-foreground hover:text-foreground"
-                title={darkMode ? "Ativar Modo Claro" : "Ativar Modo Escuro"}
-              >
-                {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              </button>
-              <Link
-                to="/"
-                className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors ${
-                  isActive('/')
-                    ? 'border-blue-500 text-foreground'
-                    : 'border-transparent text-muted-foreground hover:border-muted hover:text-foreground'
-                }`}
-              >
-                <Home className="w-4 h-4 mr-2" />
-                Dashboard
-              </Link>
-              <Link
-                to="/extrato"
-                className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors ${
-                  isActive('/extrato')
-                    ? 'border-blue-500 text-foreground'
-                    : 'border-transparent text-muted-foreground hover:border-muted hover:text-foreground'
-                }`}
-              >
-                <FileText className="w-4 h-4 mr-2" />
-                Extrato de Atendimentos
-              </Link>
-              <Link
-                to="/relatorios"
-                className={`inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors ${
-                  isActive('/relatorios')
-                    ? 'border-blue-500 text-foreground'
-                    : 'border-transparent text-muted-foreground hover:border-muted hover:text-foreground'
-                }`}
-              >
-                <BarChart3 className="w-4 h-4 mr-2" />
-                Relatórios Mensais
-              </Link>
-            </div>
-          </div>
-          <div className="flex items-center space-x-4">
-            <Button 
-              onClick={onNovoChamado}
-              className="bg-green-600 hover:bg-green-700 text-white flex items-center gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Novo Chamado
-            </Button>
-            <a
-              href="https://www.nfse.gov.br/EmissorNacional/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
-            >
-              Emitir NF
-            </a>
+    <>
+      <aside className="app-sidebar fixed inset-y-0 left-0 z-40 hidden w-[264px] flex-col border-r lg:flex" aria-label="Navegação principal">
+        <div className="flex h-[76px] items-center gap-3 border-b border-white/10 px-6">
+          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#6675ff] to-[#3947cf] text-base font-black text-white shadow-lg shadow-indigo-950/40">L</div>
+          <div>
+            <p className="text-base font-bold tracking-tight text-white">LVO TI</p>
+            <p className="text-[11px] font-medium text-[#8d9abe]">Gestão de atendimentos</p>
           </div>
         </div>
-      </div>
-    </nav>
+
+        <nav className="flex-1 px-3 py-6">
+          <LinksNavegacao />
+        </nav>
+
+        <div className="m-3 rounded-xl border border-white/10 bg-white/[0.035] p-3">
+          <p className="text-xs font-semibold text-white">Acesso rápido</p>
+          <a
+            href="https://www.nfse.gov.br/EmissorNacional/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 flex items-center gap-2 text-xs font-medium text-[#aeb8d8] transition-colors hover:text-white"
+          >
+            <ExternalLink className="h-3.5 w-3.5" />
+            Emitir Nota Fiscal
+          </a>
+        </div>
+      </aside>
+
+      <header className="app-header sticky top-0 z-30 border-b lg:ml-[264px]">
+        <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6 lg:h-[76px] lg:px-8">
+          <div className="flex min-w-0 items-center gap-3">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9 border-border bg-card/70 lg:hidden"
+              onClick={() => setMenuAberto(true)}
+              aria-label="Abrir menu de navegação"
+            >
+              <Menu className="h-5 w-5" />
+            </Button>
+            <div className="min-w-0">
+              <p className="surface-label hidden sm:block">Painel de controle</p>
+              <p className="truncate text-sm font-semibold text-foreground sm:text-base">Central de operações</p>
+            </div>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
+            <button
+              onClick={toggleDarkMode}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-card/70 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+              title={darkMode ? 'Ativar Modo Claro' : 'Ativar Modo Escuro'}
+              aria-label={darkMode ? 'Ativar Modo Claro' : 'Ativar Modo Escuro'}
+            >
+              {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </button>
+            <Button onClick={onNovoChamado} size="sm" className="h-9 rounded-lg bg-[#5c6cf4] px-3 text-white shadow-lg shadow-indigo-500/20 hover:bg-[#4d5be0]">
+              <Plus className="mr-1.5 h-4 w-4" />
+              <span className="hidden sm:inline">Novo chamado</span>
+              <span className="sm:hidden">Novo</span>
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {menuAberto && (
+        <div className="lg:hidden">
+          <button className="fixed inset-0 z-50 bg-slate-950/65 backdrop-blur-sm" onClick={() => setMenuAberto(false)} aria-label="Fechar menu de navegação" />
+          <aside className="app-sidebar fixed inset-y-0 left-0 z-[60] flex w-[82vw] max-w-[300px] flex-col animate-in slide-in-from-left duration-200" aria-label="Menu de navegação">
+            <div className="flex items-center justify-between border-b border-white/10 px-5 py-5">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#6675ff] to-[#3947cf] font-black text-white">L</div>
+                <div><p className="font-bold text-white">LVO TI</p><p className="text-[11px] text-[#8d9abe]">Gestão de atendimentos</p></div>
+              </div>
+              <Button variant="ghost" size="icon" className="h-9 w-9 text-[#b9c3e3] hover:bg-white/10 hover:text-white" onClick={() => setMenuAberto(false)} aria-label="Fechar menu"><X className="h-5 w-5" /></Button>
+            </div>
+            <nav className="flex-1 px-3 py-6"><LinksNavegacao onNavigate={() => setMenuAberto(false)} /></nav>
+            <div className="border-t border-white/10 p-3">
+              <button onClick={toggleDarkMode} className="app-nav-link flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-medium">
+                {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                {darkMode ? 'Ativar modo claro' : 'Ativar modo escuro'}
+              </button>
+            </div>
+          </aside>
+        </div>
+      )}
+    </>
   )
 }
 
@@ -112,6 +180,7 @@ function App() {
   const [isModalNovoAberto, setIsModalNovoAberto] = useState(false)
   const [notificacaoAtraso, setNotificacaoAtraso] = useState(0)
   const [dadosCarregados, setDadosCarregados] = useState(false)
+  const [erroPersistencia, setErroPersistencia] = useState('')
   const [novoAtendimento, setNovoAtendimento] = useState({
     data_atendimento: '',
     checkin: '',
@@ -127,6 +196,7 @@ function App() {
     status: 'Prox Atendimento'
   })
 
+  // Carregar tema do localStorage ao iniciar
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme")
     if (savedTheme !== null) {
@@ -134,8 +204,11 @@ function App() {
     }
   }, [])
 
+  // Salvar tema no localStorage sempre que houver alteração
   useEffect(() => {
     localStorage.setItem("theme", JSON.stringify(darkMode))
+    document.documentElement.style.colorScheme = darkMode ? 'dark' : 'light'
+
     if (darkMode) {
       document.documentElement.classList.add("dark")
     } else {
@@ -147,21 +220,45 @@ function App() {
     setDarkMode(!darkMode)
   }
 
-  // Carregar dados assíncronamente do servidor Linux ao iniciar[cite: 1]
+  // Os dados de chamados são lidos exclusivamente do arquivo configurado no servidor Linux.
   useEffect(() => {
-    getChamados().then(data => {
-      if (data && Array.isArray(data)) {
-        setAtendimentos(data);
+    let ativo = true
+
+    const carregarChamados = async () => {
+      try {
+        const dados = await getChamados()
+        if (ativo && Array.isArray(dados)) {
+          setAtendimentos(dados)
+        }
+      } catch (error) {
+        console.error('Erro ao carregar chamados do servidor:', error)
+        if (ativo) {
+          setErroPersistencia('Não foi possível carregar os chamados armazenados no servidor.')
+        }
+      } finally {
+        if (ativo) {
+          setDadosCarregados(true)
+        }
       }
-      setDadosCarregados(true);
-    });
+    }
+
+    carregarChamados()
+    return () => { ativo = false }
   }, [])
 
-  // Função centralizada para atualizar e salvar imediatamente na API do Servidor Linux
-  const atualizarESalvar = async (novosDados) => {
-    setAtendimentos(novosDados);
-    await saveChamados(novosDados);
-  };
+  // Atualiza a tela e persiste a lista completa no arquivo JSON do servidor Linux.
+  const atualizarESalvar = useCallback(async (novosDados) => {
+    setAtendimentos(novosDados)
+    setErroPersistencia('')
+
+    try {
+      await saveChamados(novosDados)
+    } catch (error) {
+      console.error('Erro ao salvar chamados no servidor:', error)
+      setErroPersistencia('As alterações não puderam ser salvas no servidor. Verifique a conexão e tente novamente.')
+      throw error
+    }
+  }, [])
 
   // Verificação automática de pagamentos atrasados
   useEffect(() => {
@@ -171,23 +268,23 @@ function App() {
     hoje.setHours(0, 0, 0, 0);
     const hojeStr = hoje.toISOString().split('T')[0];
     
-    let houveMudanca = false;
+    let novosAtrasos = 0;
     const novosAtendimentos = atendimentos.map(att => {
       if (att.data_prevista_pagamento && 
           att.data_prevista_pagamento < hojeStr && 
           att.status !== 'Pago' && 
           att.status !== 'Pagamento Atrasado') {
-        houveMudanca = true;
+        novosAtrasos++;
         return { ...att, status: 'Pagamento Atrasado' };
       }
       return att;
     });
 
-    if (houveMudanca) {
-      atualizarESalvar(novosAtendimentos);
-      setNotificacaoAtraso(atendimentos.filter(a => a.status === 'Pagamento Atrasado').length);
+    if (novosAtrasos > 0) {
+      atualizarESalvar(novosAtendimentos).catch(() => {})
+      setNotificacaoAtraso(novosAtrasos)
     }
-  }, [dadosCarregados]);
+  }, [atendimentos, atualizarESalvar, dadosCarregados]);
 
   const handleAdicionar = async () => {
     if (!novoAtendimento.data_atendimento || !novoAtendimento.numero_os) {
@@ -195,10 +292,13 @@ function App() {
       return
     }
     const atendimento = { ...novoAtendimento, id: Date.now().toString() }
-    const atualizados = [...atendimentos, atendimento];
-    
-    await atualizarESalvar(atualizados);
-    
+
+    try {
+      await atualizarESalvar([...atendimentos, atendimento])
+    } catch {
+      return
+    }
+
     setNovoAtendimento({
       data_atendimento: '', checkin: '', checkout: '', numero_os: '', nome_cliente: '',
       plataforma: plataformas[0], data_prevista_pagamento: '', valor_chamado: '0',
@@ -209,42 +309,51 @@ function App() {
 
   return (
     <Router>
-      <div className={`min-h-screen ${darkMode ? "bg-gray-900 text-gray-100" : "bg-gray-50"}`}>
+      <div className="app-shell">
         <Navigation 
           toggleDarkMode={toggleDarkMode} 
           darkMode={darkMode} 
           onNovoChamado={() => setIsModalNovoAberto(true)} 
         />
 
+        <div className="lg:ml-[264px]">
+        {erroPersistencia && (
+          <div className="mx-4 mt-4 flex items-center justify-between gap-3 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-300 shadow-lg sm:mx-6 lg:mx-8">
+            <span>{erroPersistencia}</span>
+            <button onClick={() => setErroPersistencia('')} className="rounded p-1 hover:bg-red-500/10" aria-label="Fechar aviso de persistência"><X className="h-4 w-4" /></button>
+          </div>
+        )}
+
         {notificacaoAtraso > 0 && (
-          <div className="bg-red-600 text-white px-4 py-3 shadow-lg flex items-center justify-between animate-in fade-in slide-in-from-top duration-500">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="w-6 h-6 animate-pulse" />
-              <div>
+          <div className="mx-4 mt-4 flex items-start justify-between gap-3 rounded-xl border border-red-400/30 bg-red-500/90 px-4 py-3 text-white shadow-xl shadow-red-950/15 animate-in fade-in slide-in-from-top duration-500 sm:mx-6 sm:items-center lg:mx-8">
+            <div className="flex min-w-0 items-start gap-3 sm:items-center">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 animate-pulse sm:mt-0 sm:h-6 sm:w-6" />
+              <div className="min-w-0">
                 <p className="font-bold">Atenção: Pagamentos Vencidos!</p>
-                <p className="text-sm opacity-90">Identificamos {notificacaoAtraso} chamado(s) com pagamento atrasado.</p>
+                <p className="text-sm opacity-90">Identificamos {notificacaoAtraso} novo(s) chamado(s) que passaram da data de pagamento e foram movidos para "Atrasado".</p>
               </div>
             </div>
-            <button 
+            <button
               onClick={() => setNotificacaoAtraso(0)}
-              className="p-1 hover:bg-white/20 rounded-full transition-colors"
+              className="shrink-0 rounded-full p-1 transition-colors hover:bg-white/20"
+              aria-label="Fechar notificação"
             >
-              <X className="w-5 h-5" />
+              <X className="h-5 w-5" />
             </button>
           </div>
         )}
         
-        <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-          <Routes>
-            <Route path="/" element={<Dashboard atendimentos={atendimentos} />} />
-            <Route path="/extrato" element={<Extrato atendimentos={atendimentos} setAtendimentos={atualizarESalvar} />} />
-            <Route path="/relatorios" element={<Relatorios atendimentos={atendimentos} />} />
-          </Routes>
+        <main className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+          {dadosCarregados ? (
+            <AnimatedRoutes atendimentos={atendimentos} setAtendimentos={atualizarESalvar} />
+          ) : (
+            <PageLoadingFallback />
+          )}
         </main>
 
         {/* Modal Global de Novo Chamado */}
         <Dialog open={isModalNovoAberto} onOpenChange={setIsModalNovoAberto}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-h-[90vh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto sm:w-full">
             <DialogHeader>
               <DialogTitle>Registrar Novo Chamado</DialogTitle>
               <DialogDescription>Preencha as informações abaixo para cadastrar um novo atendimento no sistema.</DialogDescription>
@@ -291,7 +400,7 @@ function App() {
                 </div>
                 <div className="space-y-2">
                   <Label>Ganhos Extras</Label>
-                  <Input type="number" value={novoAtendimento.ganhos_adicionais} onChange={(e) => setNovoAtendedimento({ ...novoAtendimento, ganhos_adicionais: e.target.value })} />
+                  <Input type="number" value={novoAtendimento.ganhos_adicionais} onChange={(e) => setNovoAtendimento({ ...novoAtendimento, ganhos_adicionais: e.target.value })} />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -313,12 +422,13 @@ function App() {
               </div>
             </div>
 
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsModalNovoAberto(false)}>Cancelar</Button>
-              <Button onClick={handleAdicionar} className="bg-green-600 hover:bg-green-700 text-white">Salvar Atendimento</Button>
+            <DialogFooter className="flex-col gap-2 sm:flex-row sm:gap-0">
+              <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsModalNovoAberto(false)}>Cancelar</Button>
+              <Button onClick={handleAdicionar} className="w-full bg-green-600 text-white hover:bg-green-700 sm:w-auto">Salvar Atendimento</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
     </Router>
   )

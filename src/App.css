@@ -31,90 +31,267 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --radius: 1rem;
+  --background: #f4f6ff;
+  --foreground: #17203d;
+  --card: #ffffff;
+  --card-foreground: #17203d;
+  --popover: #ffffff;
+  --popover-foreground: #17203d;
+  --primary: #5565ef;
+  --primary-foreground: #ffffff;
+  --secondary: #edf0ff;
+  --secondary-foreground: #253157;
+  --muted: #eef1fb;
+  --muted-foreground: #697493;
+  --accent: #eef0ff;
+  --accent-foreground: #37405f;
+  --destructive: #eb526b;
+  --border: #e1e6f3;
+  --input: #dce3f1;
+  --ring: #7584ff;
+  --chart-1: #5969f4;
+  --chart-2: #17cdb3;
+  --chart-3: #ffb13e;
+  --chart-4: #f26686;
+  --chart-5: #2fa7e8;
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: #0b1020;
+  --foreground: #edf1ff;
+  --card: #151b31;
+  --card-foreground: #edf1ff;
+  --popover: #171e37;
+  --popover-foreground: #edf1ff;
+  --primary: #7583ff;
+  --primary-foreground: #ffffff;
+  --secondary: #202945;
+  --secondary-foreground: #e7ebff;
+  --muted: #202943;
+  --muted-foreground: #97a2c2;
+  --accent: #252e4d;
+  --accent-foreground: #f4f6ff;
+  --destructive: #ff667d;
+  --border: rgba(167, 181, 230, 0.14);
+  --input: rgba(188, 199, 238, 0.16);
+  --ring: #8490ff;
+  --chart-1: #7b87ff;
+  --chart-2: #22d5ba;
+  --chart-3: #ffb946;
+  --chart-4: #ff6d99;
+  --chart-5: #42b6f5;
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
     @apply bg-background text-foreground;
+    min-width: 320px;
+    overflow-x: hidden;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    touch-action: manipulation;
+  }
+}
+
+@layer components {
+  .app-shell {
+    min-height: 100vh;
+    background:
+      radial-gradient(circle at 88% -12%, rgba(99, 112, 255, 0.17), transparent 31rem),
+      radial-gradient(circle at 16% 105%, rgba(29, 210, 181, 0.08), transparent 34rem),
+      var(--background);
+  }
+
+  .app-sidebar {
+    background: linear-gradient(180deg, #10162a 0%, #0d1223 100%);
+    border-color: rgba(166, 181, 236, 0.12);
+    box-shadow: 20px 0 50px rgba(2, 6, 23, 0.18);
+  }
+
+  .app-header {
+    background: color-mix(in srgb, var(--background) 82%, transparent);
+    border-color: var(--border);
+    backdrop-filter: blur(16px);
+  }
+
+  .app-shell [data-slot="card"] {
+    border-color: var(--border);
+    background: linear-gradient(145deg, color-mix(in srgb, var(--card) 97%, #7a86ff 3%), var(--card));
+    box-shadow: 0 14px 34px rgba(18, 28, 60, 0.06);
+  }
+
+  .dark .app-shell [data-slot="card"] {
+    background: linear-gradient(145deg, rgba(31, 40, 72, 0.95), rgba(20, 27, 49, 0.98));
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+  }
+
+  .app-nav-link {
+    color: #9ca8cd;
+  }
+
+  .app-nav-link:hover {
+    color: #f4f6ff;
+    background: rgba(122, 136, 255, 0.1);
+  }
+
+  .app-nav-link-active {
+    color: #f7f8ff;
+    background: linear-gradient(90deg, rgba(116, 131, 255, 0.3), rgba(116, 131, 255, 0.08));
+    box-shadow: inset 3px 0 0 #8490ff;
+  }
+
+  .metric-card {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .metric-card::after {
+    position: absolute;
+    right: -2.75rem;
+    bottom: -3rem;
+    width: 9rem;
+    height: 9rem;
+    border-radius: 9999px;
+    background: currentColor;
+    opacity: 0.07;
+    content: "";
+  }
+
+  .metric-icon {
+    display: inline-flex;
+    height: 2.5rem;
+    width: 2.5rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.85rem;
+  }
+
+  .surface-label {
+    color: #8d9abe;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+}
+
+.page-transition {
+  animation: page-fade-in 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes page-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dark .app-shell {
+  background:
+    radial-gradient(circle at 88% -12%, rgba(105, 121, 255, 0.2), transparent 31rem),
+    radial-gradient(circle at 16% 105%, rgba(34, 213, 186, 0.09), transparent 34rem),
+    var(--background);
+}
+
+.dark [data-slot="dialog-content"],
+.dark [data-slot="select-content"] {
+  border-color: rgba(167, 181, 230, 0.2);
+  background: linear-gradient(145deg, rgba(30, 39, 70, 0.99), rgba(18, 25, 46, 0.99));
+  box-shadow: 0 24px 72px rgba(0, 0, 0, 0.42);
+}
+
+.dark [data-slot="input"],
+.dark [data-slot="select-trigger"] {
+  border-color: rgba(167, 181, 230, 0.18);
+  background-color: rgba(35, 45, 78, 0.72);
+  color: var(--foreground);
+}
+
+.dark [data-slot="input"]:hover,
+.dark [data-slot="select-trigger"]:hover {
+  border-color: rgba(132, 144, 255, 0.55);
+}
+
+.dark [data-slot="input"]::placeholder {
+  color: #8290b5;
+}
+
+.dark input[type="date"]::-webkit-calendar-picker-indicator,
+.dark input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.9) sepia(0.15) saturate(0.7);
+}
+
+.dark table thead {
+  background-color: rgba(34, 43, 74, 0.78);
+}
+
+.dark table tbody tr:hover {
+  background-color: rgba(77, 91, 162, 0.14);
+}
+
+.dark .recharts-cartesian-grid line {
+  stroke: rgba(165, 180, 252, 0.16);
+}
+
+.dark .recharts-text,
+.dark .recharts-legend-item-text {
+  fill: #9facce !important;
+  color: #9facce !important;
+}
+
+.dark .recharts-default-tooltip {
+  border: 1px solid rgba(167, 181, 230, 0.2) !important;
+  border-radius: 0.75rem !important;
+  background-color: #171f3a !important;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark .recharts-tooltip-label,
+.dark .recharts-tooltip-item {
+  color: #edf1ff !important;
+}
+
+@media (max-width: 639px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+
+  .page-transition {
+    animation: none;
   }
 }

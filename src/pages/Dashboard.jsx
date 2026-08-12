@@ -1,9 +1,84 @@
-import { useState, useMemo } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { Calendar, TrendingUp, DollarSign, Clock, ChevronLeft, ChevronRight, Info, AlertTriangle } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+
+const DashboardCharts = lazy(() => import('@/components/DashboardCharts'))
+
+function ChartLoadingPlaceholder({ tipo }) {
+  if (tipo === 'plataforma') {
+    return (
+      <Card className="min-h-[292px]">
+        <CardHeader>
+          <CardTitle>Faturamento por Plataforma</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-[220px] animate-pulse rounded-md bg-muted" aria-label="Carregando gráfico por plataforma" />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+      {['Faturamento Mensal', 'Evolução do Faturamento Bruto'].map((titulo) => (
+        <Card key={titulo} className="min-h-[360px]">
+          <CardHeader>
+            <CardTitle>{titulo}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[260px] animate-pulse rounded-md bg-muted" aria-label={`Carregando ${titulo}`} />
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
+}
+
+function DeferredDashboardCharts({ tipo, faturamentoPorPlataforma, dadosMensais, anoExibicao }) {
+  const containerRef = useRef(null)
+  const [deveCarregar, setDeveCarregar] = useState(false)
+
+  useEffect(() => {
+    if (!containerRef.current) return undefined
+
+    if (!('IntersectionObserver' in window)) {
+      setDeveCarregar(true)
+      return undefined
+    }
+
+    const observer = new IntersectionObserver(
+      ([entrada]) => {
+        if (entrada.isIntersecting) {
+          setDeveCarregar(true)
+          observer.disconnect()
+        }
+      },
+      { rootMargin: '320px 0px' }
+    )
+
+    observer.observe(containerRef.current)
+    return () => observer.disconnect()
+  }, [])
+
+  const placeholder = <ChartLoadingPlaceholder tipo={tipo} />
+
+  return (
+    <div ref={containerRef}>
+      {deveCarregar ? (
+        <Suspense fallback={placeholder}>
+          <DashboardCharts
+            tipo={tipo}
+            faturamentoPorPlataforma={faturamentoPorPlataforma}
+            dadosMensais={dadosMensais}
+            anoExibicao={anoExibicao}
+          />
+        </Suspense>
+      ) : placeholder}
+    </div>
+  )
+}
 
 function Dashboard({ atendimentos }) {
   const [dataExibicao, setDataExibicao] = useState(new Date())
@@ -25,10 +100,11 @@ function Dashboard({ atendimentos }) {
     return (parseFloat(atendimento.valor_chamado) || 0) + (parseFloat(atendimento.ganhos_adicionais) || 0)
   }
 
+  // Saldo líquido a receber: valor bruto menos o adiantamento já recebido.
   const calcularValorLiquido = (atendimento) => {
     const bruto = calcularValorBruto(atendimento)
-    const despesas = parseFloat(atendimento.despesas_os) || 0
-    return bruto - despesas
+    const adiantamento = parseFloat(atendimento.adiantamento_recebido) || 0
+    return bruto - adiantamento
   }
 
   const diasComAtendimentos = useMemo(() => {
@@ -104,13 +180,13 @@ function Dashboard({ atendimentos }) {
       return dataAtendimento.getFullYear() === anoExibicao && dataAtendimento.getMonth() === mesExibicao
     })
     const totalBruto = atendimentosMes.reduce((acc, a) => acc + calcularValorBruto(a), 0)
-    const totalDespesas = atendimentosMes.reduce((acc, a) => acc + (parseFloat(a.despesas_os) || 0), 0)
-    const totalLiquido = totalBruto - totalDespesas
+    const totalAdiantamentos = atendimentosMes.reduce((acc, a) => acc + (parseFloat(a.adiantamento_recebido) || 0), 0)
+    const totalLiquido = totalBruto - totalAdiantamentos
     const totalHoras = atendimentosMes.reduce((acc, a) => acc + calcularHoras(a.checkin, a.checkout), 0)
     return {
       totalAtendimentos: atendimentosMes.length,
       totalBruto,
-      totalDespesas,
+      totalAdiantamentos,
       totalLiquido,
       totalHoras
     }
@@ -167,7 +243,7 @@ function Dashboard({ atendimentos }) {
         <div
           key={dia}
           onClick={() => handleDiaClick(dataStr)}
-          className={`h-10 flex items-center justify-center rounded-lg text-sm font-medium transition-all cursor-pointer ${
+          className={`flex h-9 items-center justify-center rounded-md text-sm font-medium transition-all cursor-pointer sm:h-10 sm:rounded-lg ${
             ehHoje
               ? 'bg-primary text-primary-foreground'
               : temAtendimento
@@ -183,20 +259,20 @@ function Dashboard({ atendimentos }) {
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <button onClick={() => mudarMes(-1)} className="p-2 rounded-md hover:bg-accent"><ChevronLeft className="w-4 h-4" /></button>
-          <h3 className="text-lg font-semibold">{new Date(anoAtual, mesAtual).toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</h3>
+          <h3 className="text-base font-semibold capitalize sm:text-lg">{new Date(anoAtual, mesAtual).toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</h3>
           <button onClick={() => mudarMes(1)} className="p-2 rounded-md hover:bg-accent"><ChevronRight className="w-4 h-4" /></button>
         </div>
-        <div className="grid grid-cols-7 gap-2 mb-2">
+        <div className="mb-2 grid grid-cols-7 gap-1 sm:gap-2">
           {diasSemana.map(dia => (
-            <div key={dia} className="text-center text-xs font-semibold text-muted-foreground">
+            <div key={dia} className="text-center text-[10px] font-semibold text-muted-foreground sm:text-xs">
               {dia}
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-2">
+        <div className="grid grid-cols-7 gap-1 sm:gap-2">
           {dias}
         </div>
-        <div className="flex items-center justify-center gap-4 mt-4 text-xs">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs">
           <div className="flex items-center gap-2">
             <div className="w-4 h-4 bg-primary rounded"></div>
             <span className="text-muted-foreground">Hoje</span>
@@ -211,19 +287,26 @@ function Dashboard({ atendimentos }) {
   }
 
   return (
-    <div className="px-4 py-6 space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold text-foreground">Dashboard</h2>
-        <p className="mt-1 text-sm text-muted-foreground">Visão geral dos seus atendimentos e faturamento para {new Date(dataExibicao).toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</p>
+    <div className="space-y-5 sm:space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="surface-label">Visão geral</p>
+          <h2 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Resumo financeiro</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Acompanhe atendimentos, recebimentos e produtividade em um só lugar.</p>
+        </div>
+        <div className="inline-flex w-fit items-center gap-2 rounded-xl border border-border bg-card/70 px-3 py-2 text-xs font-semibold capitalize text-muted-foreground shadow-sm">
+          <Calendar className="h-4 w-4 text-primary" />
+          {new Date(dataExibicao).toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
         {/* Card Pagamento Atrasado */}
         <div onClick={() => pagamentosAtrasados && setIsModalAtrasadosAberto(true)} className="cursor-pointer block hover:shadow-lg transition-shadow rounded-lg">
-          <Card className="border-l-4 border-red-500 h-full">
+          <Card className="metric-card h-full border-red-400/35 bg-red-500/[0.035]">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Pagamentos Atrasados</CardTitle>
-              <AlertTriangle className="h-4 w-4 text-red-500" />
+              <span className="metric-icon bg-red-500/12 text-red-500"><AlertTriangle className="h-4 w-4" /></span>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-red-500">
@@ -240,10 +323,10 @@ function Dashboard({ atendimentos }) {
 
         {/* Card Próximo Pagamento */}
         <div onClick={() => proximoPagamento && setIsModalAberto(true)} className="cursor-pointer block hover:shadow-lg transition-shadow rounded-lg">
-          <Card className="border-l-4 border-green-500 h-full">
+          <Card className="metric-card h-full border-emerald-400/35 bg-emerald-500/[0.035]">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Próximo Pagamento</CardTitle>
-              <DollarSign className="h-4 w-4 text-green-500" />
+              <span className="metric-icon bg-emerald-500/12 text-emerald-500"><DollarSign className="h-4 w-4" /></span>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-green-500">
@@ -259,10 +342,10 @@ function Dashboard({ atendimentos }) {
         </div>
 
         <Link to="/extrato" className="block hover:shadow-lg transition-shadow rounded-lg">
-          <Card className="h-full">
+          <Card className="metric-card h-full border-sky-400/30 bg-sky-500/[0.03]">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total de Atendimentos</CardTitle>
-              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span className="metric-icon bg-sky-500/12 text-sky-500"><Calendar className="h-4 w-4" /></span>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{estatisticas.totalAtendimentos}</div>
@@ -272,11 +355,11 @@ function Dashboard({ atendimentos }) {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <Card>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
+        <Card className="metric-card border-violet-400/30 bg-violet-500/[0.03]">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Faturamento Bruto</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <span className="metric-icon bg-violet-500/12 text-violet-500"><TrendingUp className="h-4 w-4" /></span>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -286,10 +369,10 @@ function Dashboard({ atendimentos }) {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="metric-card border-indigo-400/30 bg-indigo-500/[0.03]">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Faturamento Líquido</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <span className="metric-icon bg-indigo-500/12 text-indigo-500"><DollarSign className="h-4 w-4" /></span>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
@@ -299,10 +382,10 @@ function Dashboard({ atendimentos }) {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="metric-card border-amber-400/30 bg-amber-500/[0.03]">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Horas Trabalhadas</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span className="metric-icon bg-amber-500/12 text-amber-500"><Clock className="h-4 w-4" /></span>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{estatisticas.totalHoras.toFixed(1)}h</div>
@@ -313,7 +396,7 @@ function Dashboard({ atendimentos }) {
 
       {/* Modal de Detalhes do Próximo Pagamento */}
       <Dialog open={isModalAberto} onOpenChange={setIsModalAberto}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-h-[88vh] w-[calc(100%-2rem)] max-w-md overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Detalhes do Próximo Pagamento</DialogTitle>
             <DialogDescription>
@@ -322,13 +405,13 @@ function Dashboard({ atendimentos }) {
           </DialogHeader>
           <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
             {proximoPagamento?.atendimentos.map((att) => (
-              <div key={att.id} className="flex items-center justify-between p-3 rounded-lg border bg-accent/50">
+              <div key={att.id} className="flex flex-col gap-2 rounded-lg border bg-accent/50 p-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="space-y-1">
                   <p className="text-sm font-bold">OS: {att.numero_os}</p>
                   <p className="text-xs text-muted-foreground">Realizado em: {new Date(att.data_atendimento + 'T03:00:00Z').toLocaleDateString('pt-BR')}</p>
                   <p className="text-xs font-medium text-primary">{att.plataforma}</p>
                 </div>
-                <div className="text-right">
+                <div className="text-left sm:text-right">
                   <p className="text-sm font-bold text-green-500">
                     {calcularValorLiquido(att).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </p>
@@ -347,7 +430,7 @@ function Dashboard({ atendimentos }) {
 
       {/* Modal de Detalhes de Pagamentos Atrasados */}
       <Dialog open={isModalAtrasadosAberto} onOpenChange={setIsModalAtrasadosAberto}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-h-[88vh] w-[calc(100%-2rem)] max-w-md overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-red-500">
               <AlertTriangle className="w-5 h-5" />
@@ -359,13 +442,13 @@ function Dashboard({ atendimentos }) {
           </DialogHeader>
           <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
             {pagamentosAtrasados?.atendimentos.map((att) => (
-              <div key={att.id} className="flex items-center justify-between p-3 rounded-lg border border-red-500/20 bg-red-500/5">
+              <div key={att.id} className="flex flex-col gap-2 rounded-lg border border-red-500/20 bg-red-500/5 p-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="space-y-1">
                   <p className="text-sm font-bold">OS: {att.numero_os}</p>
                   <p className="text-xs text-muted-foreground">Vencimento: {att.data_prevista_pagamento ? new Date(att.data_prevista_pagamento + 'T03:00:00Z').toLocaleDateString('pt-BR') : 'Não informada'}</p>
                   <p className="text-xs font-medium text-primary">{att.plataforma}</p>
                 </div>
-                <div className="text-right">
+                <div className="text-left sm:text-right">
                   <p className="text-sm font-bold text-red-500">
                     {calcularValorLiquido(att).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                   </p>
@@ -384,7 +467,7 @@ function Dashboard({ atendimentos }) {
 
       {/* Modal de Detalhes do Calendário */}
       <Dialog open={isModalCalendarioAberto} onOpenChange={setIsModalCalendarioAberto}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-h-[88vh] w-[calc(100%-2rem)] max-w-md overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>Atendimentos do Dia</DialogTitle>
             <DialogDescription>
@@ -422,8 +505,8 @@ function Dashboard({ atendimentos }) {
         </DialogContent>
       </Dialog>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card>
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+        <Card className="overflow-hidden">
           <CardHeader>
             <CardTitle>Calendário de Atendimentos</CardTitle>
           </CardHeader>
@@ -432,69 +515,17 @@ function Dashboard({ atendimentos }) {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Faturamento por Plataforma</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {faturamentoPorPlataforma.length > 0 ? (
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={faturamentoPorPlataforma}>
-                  <XAxis dataKey="plataforma" />
-                  <YAxis />
-                  <Tooltip formatter={(value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} />
-                  <Legend />
-                  <Bar dataKey="faturamento" fill="#8884d8" />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <p className="text-muted-foreground">Nenhum faturamento registrado para este mês.</p>
-            )}
-          </CardContent>
-        </Card>
+        <DeferredDashboardCharts
+          tipo="plataforma"
+          faturamentoPorPlataforma={faturamentoPorPlataforma}
+        />
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Faturamento Mensal</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">Comparação de faturamento bruto, despesas e líquido no ano de {dataExibicao.getFullYear()}</p>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={dadosMensais}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="mes" />
-                <YAxis formatter={(value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} />
-                <Tooltip formatter={(value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} />
-                <Legend />
-                <Line type="monotone" dataKey="faturamentoBruto" stroke="#8884d8" name="Faturamento Bruto" />
-                <Line type="monotone" dataKey="despesas" stroke="#82ca9d" name="Despesas" />
-                <Line type="monotone" dataKey="faturamentoLiquido" stroke="#ffc658" name="Faturamento Líquido" />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Evolução do Faturamento Bruto</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">Evolução do faturamento bruto ao longo dos meses</p>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={dadosMensais}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="mes" />
-                <YAxis formatter={(value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} />
-                <Tooltip formatter={(value) => value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} />
-                <Legend />
-                <Bar dataKey="faturamentoBruto" fill="#8884d8" name="Faturamento Bruto" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+      <DeferredDashboardCharts
+        tipo="mensal"
+        dadosMensais={dadosMensais}
+        anoExibicao={dataExibicao.getFullYear()}
+      />
     </div>
   )
 }

@@ -1,28 +1,33 @@
 export async function getChamados() {
-    try {
-        const response = await fetch('/api/chamados');
-        if (!response.ok) throw new Error('Erro ao buscar dados do servidor');
-        return await response.json();
-    } catch (error) {
-        console.error("Erro ao carregar do servidor, usando localStorage:", error);
-        const local = localStorage.getItem('chamados');
-        return local ? JSON.parse(local) : [];
-    }
+  const response = await fetch('/api/chamados', {
+    headers: { Accept: 'application/json' },
+  })
+
+  if (!response.ok) {
+    throw new Error(`Erro ao buscar dados do servidor: ${response.status}`)
+  }
+
+  const chamados = await response.json()
+  if (!Array.isArray(chamados)) {
+    throw new Error('O servidor retornou um formato inválido de chamados')
+  }
+
+  return chamados
 }
 
 export async function saveChamados(chamadosData) {
-    try {
-        const response = await fetch('/api/chamados', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(chamadosData),
-        });
-        if (!response.ok) throw new Error('Erro ao salvar no servidor');
-        return await response.json();
-    } catch (error) {
-        console.error("Erro ao salvar no servidor, salvando no localStorage:", error);
-        localStorage.setItem('chamados', JSON.stringify(chamadosData));
-    }
+  const response = await fetch('/api/chamados', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(chamadosData),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Erro ao salvar dados no servidor: ${response.status}`)
+  }
+
+  return response.json()
 }

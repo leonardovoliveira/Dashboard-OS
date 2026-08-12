@@ -1,0 +1,9 @@
+# Dados persistidos exclusivamente no servidor Linux
+chamados.json
+chamados.json.tmp
+.runtime/
+
+# Dependências e configurações locais
+node_modules/
+.env
+.env.*
