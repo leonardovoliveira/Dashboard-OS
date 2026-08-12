@@ -191,6 +191,16 @@
     letter-spacing: 0.09em;
     text-transform: uppercase;
   }
+
+  .dashboard-analytics-card {
+    min-height: 360px;
+  }
+
+  @media (min-width: 640px) {
+    .dashboard-analytics-card {
+      min-height: 390px;
+    }
+  }
 }
 
 .page-transition {

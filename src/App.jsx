@@ -1,6 +1,6 @@
 import { createElement, lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom'
-import { Home, FileText, BarChart3, Sun, Moon, Plus, AlertTriangle, X, Menu, ExternalLink } from 'lucide-react'
+import { Home, FileText, BarChart3, Sun, Moon, Plus, AlertTriangle, X, Menu, ExternalLink, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -53,7 +53,7 @@ const statusOpcoes = [
   'Pago'
 ]
 
-function Navigation({ toggleDarkMode, darkMode, onNovoChamado }) {
+function Navigation({ toggleDarkMode, darkMode, onNovoChamado, sidebarRecolhida, onToggleSidebar }) {
   const location = useLocation()
   const [menuAberto, setMenuAberto] = useState(false)
 
@@ -65,20 +65,22 @@ function Navigation({ toggleDarkMode, darkMode, onNovoChamado }) {
 
   const isActive = (path) => location.pathname === path
 
-  const LinksNavegacao = ({ onNavigate = () => {} }) => (
+  const LinksNavegacao = ({ onNavigate = () => {}, compacta = false }) => (
     <>
-      <p className="mb-2 px-3 text-[10px] font-bold tracking-[0.16em] text-[#69769f]">OPERACIONAL</p>
+      <p className={`mb-2 px-3 text-[10px] font-bold tracking-[0.16em] text-[#69769f] ${compacta ? 'sr-only' : ''}`}>OPERACIONAL</p>
       {itensNavegacao.map(({ path, label, icon }) => (
         <Link
           key={path}
           to={path}
           onClick={onNavigate}
-          className={`app-nav-link mb-1 flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-all ${
-            isActive(path) ? 'app-nav-link-active' : ''
-          }`}
+          title={compacta ? label : undefined}
+          aria-label={label}
+          className={`app-nav-link mb-1 flex min-h-11 items-center gap-3 rounded-lg text-sm font-medium transition-all ${
+            compacta ? 'justify-center px-0' : 'px-3'
+          } ${isActive(path) ? 'app-nav-link-active' : ''}`}
         >
-          {createElement(icon, { className: 'h-4 w-4' })}
-          {label}
+          {createElement(icon, { className: 'h-4 w-4 shrink-0' })}
+          <span className={compacta ? 'sr-only' : ''}>{label}</span>
         </Link>
       ))}
     </>
@@ -86,34 +88,40 @@ function Navigation({ toggleDarkMode, darkMode, onNovoChamado }) {
 
   return (
     <>
-      <aside className="app-sidebar fixed inset-y-0 left-0 z-40 hidden w-[264px] flex-col border-r lg:flex" aria-label="Navegação principal">
-        <div className="flex h-[76px] items-center gap-3 border-b border-white/10 px-6">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-[#6675ff] to-[#3947cf] text-base font-black text-white shadow-lg shadow-indigo-950/40">L</div>
-          <div>
-            <p className="text-base font-bold tracking-tight text-white">LVO TI</p>
-            <p className="text-[11px] font-medium text-[#8d9abe]">Gestão de atendimentos</p>
+      <aside className={`app-sidebar fixed inset-y-0 left-0 z-40 hidden flex-col border-r transition-[width] duration-300 lg:flex ${sidebarRecolhida ? 'w-[84px]' : 'w-[264px]'}`} aria-label="Navegação principal">
+        <div className={`flex h-[76px] items-center gap-2 border-b border-white/10 ${sidebarRecolhida ? 'justify-center px-3' : 'justify-between px-5'}`}>
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#6675ff] to-[#3947cf] text-base font-black text-white shadow-lg shadow-indigo-950/40">L</div>
+            <div className={sidebarRecolhida ? 'hidden' : ''}>
+              <p className="text-base font-bold tracking-tight text-white">LVO TI</p>
+              <p className="text-[11px] font-medium text-[#8d9abe]">Gestão de atendimentos</p>
+            </div>
           </div>
+          <Button variant="ghost" size="icon" onClick={onToggleSidebar} className="h-8 w-8 shrink-0 text-[#aeb8d8] hover:bg-white/10 hover:text-white" title={sidebarRecolhida ? 'Expandir menu lateral' : 'Recolher menu lateral'} aria-label={sidebarRecolhida ? 'Expandir menu lateral' : 'Recolher menu lateral'}>
+            {sidebarRecolhida ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+          </Button>
         </div>
 
         <nav className="flex-1 px-3 py-6">
-          <LinksNavegacao />
+          <LinksNavegacao compacta={sidebarRecolhida} />
         </nav>
 
-        <div className="m-3 rounded-xl border border-white/10 bg-white/[0.035] p-3">
-          <p className="text-xs font-semibold text-white">Acesso rápido</p>
+        <div className={`m-3 rounded-xl border border-white/10 bg-white/[0.035] ${sidebarRecolhida ? 'p-2' : 'p-3'}`}>
+          {!sidebarRecolhida && <p className="text-xs font-semibold text-white">Acesso rápido</p>}
           <a
             href="https://www.nfse.gov.br/EmissorNacional/"
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-2 flex items-center gap-2 text-xs font-medium text-[#aeb8d8] transition-colors hover:text-white"
+            title="Emitir Nota Fiscal"
+            className={`text-xs font-medium text-[#aeb8d8] transition-colors hover:text-white ${sidebarRecolhida ? 'flex h-8 items-center justify-center' : 'mt-2 flex items-center gap-2'}`}
           >
             <ExternalLink className="h-3.5 w-3.5" />
-            Emitir Nota Fiscal
+            <span className={sidebarRecolhida ? 'sr-only' : ''}>Emitir Nota Fiscal</span>
           </a>
         </div>
       </aside>
 
-      <header className="app-header sticky top-0 z-30 border-b lg:ml-[264px]">
+      <header className={`app-header sticky top-0 z-30 border-b transition-[margin] duration-300 ${sidebarRecolhida ? 'lg:ml-[84px]' : 'lg:ml-[264px]'}`}>
         <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6 lg:h-[76px] lg:px-8">
           <div className="flex min-w-0 items-center gap-3">
             <Button
@@ -126,8 +134,8 @@ function Navigation({ toggleDarkMode, darkMode, onNovoChamado }) {
               <Menu className="h-5 w-5" />
             </Button>
             <div className="min-w-0">
-              <p className="surface-label hidden sm:block">Painel de controle</p>
-              <p className="truncate text-sm font-semibold text-foreground sm:text-base">Central de operações</p>
+              <p className="surface-label hidden sm:block">Dashboard</p>
+              <p className="truncate text-sm font-semibold text-foreground sm:text-base">LVO Consultoria em TI</p>
             </div>
           </div>
 
@@ -177,6 +185,7 @@ function Navigation({ toggleDarkMode, darkMode, onNovoChamado }) {
 function App() {
   const [atendimentos, setAtendimentos] = useState([])
   const [darkMode, setDarkMode] = useState(true)
+  const [sidebarRecolhida, setSidebarRecolhida] = useState(false)
   const [isModalNovoAberto, setIsModalNovoAberto] = useState(false)
   const [notificacaoAtraso, setNotificacaoAtraso] = useState(0)
   const [dadosCarregados, setDadosCarregados] = useState(false)
@@ -313,10 +322,12 @@ function App() {
         <Navigation 
           toggleDarkMode={toggleDarkMode} 
           darkMode={darkMode} 
+          sidebarRecolhida={sidebarRecolhida}
+          onToggleSidebar={() => setSidebarRecolhida((atual) => !atual)}
           onNovoChamado={() => setIsModalNovoAberto(true)} 
         />
 
-        <div className="lg:ml-[264px]">
+        <div className={`transition-[margin] duration-300 ${sidebarRecolhida ? 'lg:ml-[84px]' : 'lg:ml-[264px]'}`}>
         {erroPersistencia && (
           <div className="mx-4 mt-4 flex items-center justify-between gap-3 rounded-xl border border-red-400/30 bg-red-500/10 px-4 py-3 text-sm text-red-300 shadow-lg sm:mx-6 lg:mx-8">
             <span>{erroPersistencia}</span>

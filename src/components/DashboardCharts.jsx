@@ -1,11 +1,11 @@
-import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
+import { BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 const formatarMoeda = (valor) => valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 function GraficoPorPlataforma({ faturamentoPorPlataforma }) {
   return (
-    <Card>
+    <Card className="dashboard-analytics-card">
       <CardHeader>
         <CardTitle>Faturamento por Plataforma</CardTitle>
       </CardHeader>
@@ -31,7 +31,7 @@ function GraficoPorPlataforma({ faturamentoPorPlataforma }) {
 function GraficosMensais({ dadosMensais, anoExibicao }) {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-      <Card>
+      <Card className="dashboard-analytics-card">
         <CardHeader>
           <CardTitle>Faturamento Mensal</CardTitle>
         </CardHeader>
@@ -52,7 +52,7 @@ function GraficosMensais({ dadosMensais, anoExibicao }) {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="dashboard-analytics-card">
         <CardHeader>
           <CardTitle>Evolução do Faturamento Bruto</CardTitle>
         </CardHeader>

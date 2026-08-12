@@ -9,7 +9,7 @@ const DashboardCharts = lazy(() => import('@/components/DashboardCharts'))
 function ChartLoadingPlaceholder({ tipo }) {
   if (tipo === 'plataforma') {
     return (
-      <Card className="min-h-[292px]">
+      <Card className="dashboard-analytics-card">
         <CardHeader>
           <CardTitle>Faturamento por Plataforma</CardTitle>
         </CardHeader>
@@ -23,7 +23,7 @@ function ChartLoadingPlaceholder({ tipo }) {
   return (
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
       {['Faturamento Mensal', 'Evolução do Faturamento Bruto'].map((titulo) => (
-        <Card key={titulo} className="min-h-[360px]">
+        <Card key={titulo} className="dashboard-analytics-card">
           <CardHeader>
             <CardTitle>{titulo}</CardTitle>
           </CardHeader>
@@ -107,6 +107,9 @@ function Dashboard({ atendimentos }) {
     return bruto - adiantamento
   }
 
+  // A previsão não compõe horas ou faturamento até que a OS deixe de estar em "Prox Atendimento".
+  const osExecutada = (atendimento) => String(atendimento.status || '').trim().toLowerCase() !== 'prox atendimento'
+
   const diasComAtendimentos = useMemo(() => {
     const dias = new Set()
     atendimentos.forEach(atendimento => {
@@ -130,7 +133,7 @@ function Dashboard({ atendimentos }) {
       }
     }
     atendimentos.forEach(atendimento => {
-      if (atendimento.data_atendimento) {
+      if (atendimento.data_atendimento && osExecutada(atendimento)) {
         const mesKey = atendimento.data_atendimento.substring(0, 7)
         if (meses[mesKey]) {
           const bruto = calcularValorBruto(atendimento)
@@ -179,10 +182,11 @@ function Dashboard({ atendimentos }) {
       const dataAtendimento = new Date(a.data_atendimento + 'T03:00:00Z')
       return dataAtendimento.getFullYear() === anoExibicao && dataAtendimento.getMonth() === mesExibicao
     })
-    const totalBruto = atendimentosMes.reduce((acc, a) => acc + calcularValorBruto(a), 0)
-    const totalAdiantamentos = atendimentosMes.reduce((acc, a) => acc + (parseFloat(a.adiantamento_recebido) || 0), 0)
+    const atendimentosExecutadosMes = atendimentosMes.filter(osExecutada)
+    const totalBruto = atendimentosExecutadosMes.reduce((acc, a) => acc + calcularValorBruto(a), 0)
+    const totalAdiantamentos = atendimentosExecutadosMes.reduce((acc, a) => acc + (parseFloat(a.adiantamento_recebido) || 0), 0)
     const totalLiquido = totalBruto - totalAdiantamentos
-    const totalHoras = atendimentosMes.reduce((acc, a) => acc + calcularHoras(a.checkin, a.checkout), 0)
+    const totalHoras = atendimentosExecutadosMes.reduce((acc, a) => acc + calcularHoras(a.checkin, a.checkout), 0)
     return {
       totalAtendimentos: atendimentosMes.length,
       totalBruto,
@@ -195,7 +199,7 @@ function Dashboard({ atendimentos }) {
   const faturamentoPorPlataforma = useMemo(() => {
     const plataformas = {}
     const atendimentosMes = atendimentos.filter(a => {
-      if (!a.data_atendimento) return false
+      if (!a.data_atendimento || !osExecutada(a)) return false
       const dataAtendimento = new Date(a.data_atendimento + 'T03:00:00Z')
       return dataAtendimento.getFullYear() === dataExibicao.getFullYear() && dataAtendimento.getMonth() === dataExibicao.getMonth()
     })
@@ -365,7 +369,7 @@ function Dashboard({ atendimentos }) {
             <div className="text-2xl font-bold">
               {estatisticas.totalBruto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
             </div>
-            <p className="text-xs text-muted-foreground">no mês</p>
+            <p className="text-xs text-muted-foreground">OS executadas no mês</p>
           </CardContent>
         </Card>
 
@@ -378,7 +382,7 @@ function Dashboard({ atendimentos }) {
             <div className="text-2xl font-bold">
               {estatisticas.totalLiquido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
             </div>
-            <p className="text-xs text-muted-foreground">no mês</p>
+            <p className="text-xs text-muted-foreground">OS executadas no mês</p>
           </CardContent>
         </Card>
 
@@ -389,7 +393,7 @@ function Dashboard({ atendimentos }) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{estatisticas.totalHoras.toFixed(1)}h</div>
-            <p className="text-xs text-muted-foreground">no mês</p>
+            <p className="text-xs text-muted-foreground">OS executadas no mês</p>
           </CardContent>
         </Card>
       </div>
@@ -506,7 +510,7 @@ function Dashboard({ atendimentos }) {
       </Dialog>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-        <Card className="overflow-hidden">
+        <Card className="dashboard-analytics-card overflow-hidden">
           <CardHeader>
             <CardTitle>Calendário de Atendimentos</CardTitle>
           </CardHeader>
