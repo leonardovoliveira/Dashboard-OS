@@ -75,8 +75,8 @@ function Navigation({ toggleDarkMode, darkMode, onNovoChamado, sidebarRecolhida,
           onClick={onNavigate}
           title={compacta ? label : undefined}
           aria-label={label}
-          className={`app-nav-link mb-1 flex min-h-11 items-center gap-3 rounded-lg text-sm font-medium transition-all ${
-            compacta ? 'justify-center px-0' : 'px-3'
+          className={`app-nav-link mb-2 flex h-11 min-h-11 items-center rounded-lg text-sm font-medium transition-all ${
+            compacta ? 'mx-auto w-11 justify-center p-0' : 'gap-3 px-3'
           } ${isActive(path) ? 'app-nav-link-active' : ''}`}
         >
           {createElement(icon, { className: 'h-4 w-4 shrink-0' })}
@@ -89,7 +89,7 @@ function Navigation({ toggleDarkMode, darkMode, onNovoChamado, sidebarRecolhida,
   return (
     <>
       <aside className={`app-sidebar fixed inset-y-0 left-0 z-40 hidden flex-col border-r transition-[width] duration-300 lg:flex ${sidebarRecolhida ? 'w-[84px]' : 'w-[264px]'}`} aria-label="Navegação principal">
-        <div className={`flex h-[76px] items-center gap-2 border-b border-white/10 ${sidebarRecolhida ? 'justify-center px-3' : 'justify-between px-5'}`}>
+        <div className={`flex items-center border-b border-white/10 ${sidebarRecolhida ? 'h-[124px] flex-col justify-center gap-3 px-2' : 'h-[76px] justify-between gap-2 px-5'}`}>
           <div className="flex min-w-0 items-center gap-3">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[#6675ff] to-[#3947cf] text-base font-black text-white shadow-lg shadow-indigo-950/40">L</div>
             <div className={sidebarRecolhida ? 'hidden' : ''}>
@@ -102,7 +102,7 @@ function Navigation({ toggleDarkMode, darkMode, onNovoChamado, sidebarRecolhida,
           </Button>
         </div>
 
-        <nav className="flex-1 px-3 py-6">
+        <nav className={`flex-1 ${sidebarRecolhida ? 'px-3 py-5' : 'px-3 py-6'}`}>
           <LinksNavegacao compacta={sidebarRecolhida} />
         </nav>
 
