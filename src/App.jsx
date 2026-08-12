@@ -32,7 +32,7 @@ function AnimatedRoutes({ atendimentos, setAtendimentos }) {
     <div key={location.pathname} className="page-transition">
       <Suspense fallback={<PageLoadingFallback />}>
         <Routes location={location}>
-          <Route path="/" element={<Dashboard atendimentos={atendimentos} />} />
+          <Route path="/" element={<Dashboard atendimentos={atendimentos} onAtualizarAtendimentos={setAtendimentos} />} />
           <Route path="/extrato" element={<Extrato atendimentos={atendimentos} setAtendimentos={setAtendimentos} />} />
           <Route path="/relatorios" element={<Relatorios atendimentos={atendimentos} />} />
         </Routes>

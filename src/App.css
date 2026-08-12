@@ -307,3 +307,167 @@
     animation: none;
   }
 }
+
+.relatorio-financeiro-print {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 14mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #17203d !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  body > :not(.relatorio-financeiro-print) {
+    display: none !important;
+  }
+
+  .relatorio-financeiro-print {
+    display: block !important;
+    width: 100%;
+    color: #17203d;
+    font-family: Inter, Arial, sans-serif;
+    font-size: 10pt;
+    line-height: 1.4;
+  }
+
+  .relatorio-financeiro-cabecalho {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 2rem;
+    border-bottom: 2px solid #5565ef;
+    padding-bottom: 14px;
+  }
+
+  .relatorio-financeiro-marca {
+    margin: 0 0 4px;
+    color: #5565ef;
+    font-size: 8pt;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+  }
+
+  .relatorio-financeiro-cabecalho h1 {
+    margin: 0;
+    font-size: 21pt;
+    line-height: 1.1;
+  }
+
+  .relatorio-financeiro-cabecalho p:not(.relatorio-financeiro-marca) {
+    margin: 6px 0 0;
+    color: #5d698b;
+  }
+
+  .relatorio-financeiro-cabecalho > p {
+    flex: 0 0 145px;
+    margin-top: 4px !important;
+    font-size: 8.5pt;
+    text-align: right;
+  }
+
+  .relatorio-financeiro-resumo {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 18px 0 22px;
+  }
+
+  .relatorio-financeiro-resumo > div {
+    border: 1px solid #d7def2;
+    border-radius: 8px;
+    background: #f5f7ff;
+    padding: 11px;
+  }
+
+  .relatorio-financeiro-resumo span,
+  .relatorio-financeiro-resumo strong,
+  .relatorio-financeiro-resumo b {
+    display: block;
+  }
+
+  .relatorio-financeiro-resumo span {
+    color: #5d698b;
+    font-size: 8.5pt;
+  }
+
+  .relatorio-financeiro-resumo strong {
+    margin: 4px 0 2px;
+    font-size: 18pt;
+    line-height: 1;
+  }
+
+  .relatorio-financeiro-resumo b {
+    color: #334bbd;
+    font-size: 10.5pt;
+  }
+
+  .relatorio-financeiro-secao {
+    margin-top: 20px;
+  }
+
+  .relatorio-financeiro-secao h2 {
+    margin: 0 0 9px;
+    color: #202b53;
+    font-size: 13pt;
+  }
+
+  .relatorio-financeiro-secao table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .relatorio-financeiro-secao th,
+  .relatorio-financeiro-secao td {
+    border-bottom: 1px solid #dce2ef;
+    padding: 8px 6px;
+    text-align: left;
+    vertical-align: top;
+    word-break: break-word;
+  }
+
+  .relatorio-financeiro-secao th {
+    background: #202b53;
+    color: #ffffff;
+    font-size: 8pt;
+    font-weight: 700;
+  }
+
+  .relatorio-financeiro-secao th:nth-child(1) { width: 13%; }
+  .relatorio-financeiro-secao th:nth-child(2) { width: 25%; }
+  .relatorio-financeiro-secao th:nth-child(3) { width: 15%; }
+  .relatorio-financeiro-secao th:nth-child(4) { width: 16%; }
+  .relatorio-financeiro-secao th:nth-child(5) { width: 15%; }
+  .relatorio-financeiro-secao th:nth-child(6) { width: 16%; }
+
+  .relatorio-financeiro-secao tr {
+    break-inside: avoid;
+  }
+
+  .relatorio-financeiro-print footer {
+    margin-top: 22px;
+    border-top: 1px solid #dce2ef;
+    padding-top: 9px;
+    color: #5d698b;
+    font-size: 8pt;
+  }
+}
+
+@media print and (max-width: 600px) {
+  .relatorio-financeiro-cabecalho {
+    display: block;
+  }
+
+  .relatorio-financeiro-cabecalho > p {
+    text-align: left;
+  }
+}

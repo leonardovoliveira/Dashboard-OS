@@ -1,8 +1,11 @@
 import { Component, lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Calendar, TrendingUp, DollarSign, Clock, ChevronLeft, ChevronRight, Info, AlertTriangle } from 'lucide-react'
+import { Calendar, TrendingUp, DollarSign, Clock, ChevronLeft, ChevronRight, Info, AlertTriangle, FileDown } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 const DashboardCharts = lazy(() => import('@/components/DashboardCharts'))
 
@@ -116,7 +119,7 @@ function DeferredDashboardCharts({ tipo, faturamentoPorPlataforma, dadosMensais,
   )
 }
 
-function Dashboard({ atendimentos }) {
+function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
   const [dataExibicao, setDataExibicao] = useState(new Date())
   const [isModalAberto, setIsModalAberto] = useState(false)
   const [isModalAtrasadosAberto, setIsModalAtrasadosAberto] = useState(false)
@@ -124,6 +127,8 @@ function Dashboard({ atendimentos }) {
   const [isModalCalendarioAberto, setIsModalCalendarioAberto] = useState(false)
   const [atendimentosDiaSelecionado, setAtendimentosDiaSelecionado] = useState([])
   const [dataSelecionada, setDataSelecionada] = useState('')
+  const [osAtualizandoId, setOsAtualizandoId] = useState(null)
+  const [erroAtualizacaoStatus, setErroAtualizacaoStatus] = useState('')
 
   const calcularHoras = (checkin, checkout) => {
     if (!checkin || !checkout) return 0
@@ -146,6 +151,8 @@ function Dashboard({ atendimentos }) {
 
   // A previsão não compõe horas ou faturamento até que a OS deixe de estar em "Prox Atendimento".
   const osExecutada = (atendimento) => String(atendimento.status || '').trim().toLowerCase() !== 'prox atendimento'
+
+  const formatarData = (data) => data ? new Date(`${data}T03:00:00Z`).toLocaleDateString('pt-BR') : 'Não informada'
 
   const diasComAtendimentos = useMemo(() => {
     const dias = new Set()
@@ -235,6 +242,52 @@ function Dashboard({ atendimentos }) {
       atendimentos: itens
     }
   }, [atendimentos])
+
+  const relatorioFinanceiro = useMemo(() => {
+    const hoje = new Date()
+    hoje.setHours(0, 0, 0, 0)
+    const atrasados = atendimentos
+      .filter((atendimento) => atendimento.status === 'Pagamento Atrasado')
+      .map((atendimento) => {
+        if (!atendimento.data_prevista_pagamento) return { ...atendimento, diasAtraso: null }
+        const [ano, mes, dia] = atendimento.data_prevista_pagamento.split('-').map(Number)
+        const vencimento = new Date(ano, mes - 1, dia)
+        vencimento.setHours(0, 0, 0, 0)
+        return { ...atendimento, diasAtraso: Math.max(0, Math.round((hoje - vencimento) / 86400000)) }
+      })
+      .sort((a, b) => (b.diasAtraso ?? -1) - (a.diasAtraso ?? -1))
+    const proximos = vencimentosProximos?.atendimentos ?? []
+    const totalAtrasado = atrasados.reduce((total, atendimento) => total + calcularValorLiquido(atendimento), 0)
+    const totalProximo = proximos.reduce((total, atendimento) => total + calcularValorLiquido(atendimento), 0)
+
+    return {
+      atrasados,
+      proximos,
+      totalAtrasado,
+      totalProximo,
+      totalGeral: totalAtrasado + totalProximo,
+      quantidade: atrasados.length + proximos.length
+    }
+  }, [atendimentos, vencimentosProximos])
+
+  const atualizarStatusPagamento = async (id, status) => {
+    if (!onAtualizarAtendimentos) return
+    setErroAtualizacaoStatus('')
+    setOsAtualizandoId(id)
+    try {
+      await onAtualizarAtendimentos(atendimentos.map((atendimento) => (
+        atendimento.id === id ? { ...atendimento, status } : atendimento
+      )))
+    } catch {
+      setErroAtualizacaoStatus('Não foi possível salvar o novo status. Tente novamente.')
+    } finally {
+      setOsAtualizandoId(null)
+    }
+  }
+
+  const exportarRelatorioPDF = () => {
+    window.print()
+  }
 
   const estatisticas = useMemo(() => {
     const anoExibicao = dataExibicao.getFullYear()
@@ -364,6 +417,13 @@ function Dashboard({ atendimentos }) {
           <Calendar className="h-4 w-4 text-primary" />
           {new Date(dataExibicao).toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
         </div>
+      </div>
+
+      <div className="flex justify-start sm:justify-end">
+        <Button type="button" variant="outline" onClick={exportarRelatorioPDF} className="w-full gap-2 border-primary/35 bg-card/70 text-foreground hover:bg-accent sm:w-auto">
+          <FileDown className="h-4 w-4" />
+          Exportar relatório PDF
+        </Button>
       </div>
 
       {vencimentosProximos && (
@@ -560,15 +620,31 @@ function Dashboard({ atendimentos }) {
               Pagamentos pendentes com vencimento previsto para hoje ou os próximos 3 dias.
             </DialogDescription>
           </DialogHeader>
+          {erroAtualizacaoStatus && <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-500">{erroAtualizacaoStatus}</p>}
           <div className="max-h-[60vh] space-y-3 overflow-y-auto py-4">
             {vencimentosProximos?.atendimentos.map((att) => (
-              <div key={att.id} className="flex flex-col gap-2 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] p-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="space-y-1">
-                  <p className="text-sm font-bold">OS: {att.numero_os}</p>
-                  <p className="text-xs text-muted-foreground">Vencimento: {new Date(att.data_prevista_pagamento + 'T03:00:00Z').toLocaleDateString('pt-BR')} · {att.diasRestantes === 0 ? 'vence hoje' : `vence em ${att.diasRestantes} ${att.diasRestantes === 1 ? 'dia' : 'dias'}`}</p>
-                  <p className="text-xs font-medium text-primary">{att.plataforma}</p>
+              <div key={att.id} className="rounded-lg border border-amber-500/25 bg-amber-500/[0.06] p-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold">OS: {att.numero_os}</p>
+                    <p className="text-xs text-muted-foreground">Vencimento: {formatarData(att.data_prevista_pagamento)} · {att.diasRestantes === 0 ? 'vence hoje' : `vence em ${att.diasRestantes} ${att.diasRestantes === 1 ? 'dia' : 'dias'}`}</p>
+                    <p className="text-xs font-medium text-primary">{att.plataforma}</p>
+                  </div>
+                  <p className="text-left text-sm font-bold text-amber-500 sm:text-right">{calcularValorLiquido(att).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                 </div>
-                <p className="text-left text-sm font-bold text-amber-500 sm:text-right">{calcularValorLiquido(att).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                <div className="mt-3 flex flex-col gap-2 border-t border-amber-500/15 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs font-semibold text-muted-foreground">Atualizar status de pagamento</p>
+                  <Select value={att.status} onValueChange={(status) => atualizarStatusPagamento(att.id, status)} disabled={osAtualizandoId === att.id}>
+                    <SelectTrigger className="h-9 w-full bg-card/70 text-xs sm:w-[210px]" aria-label={`Status de pagamento da OS ${att.numero_os}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Aguardando Pagamento">Aguardando Pagamento</SelectItem>
+                      <SelectItem value="Pagamento Atrasado">Pagamento Atrasado</SelectItem>
+                      <SelectItem value="Pago">Pago</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             ))}
           </div>
@@ -578,6 +654,45 @@ function Dashboard({ atendimentos }) {
           </div>
         </DialogContent>
       </Dialog>
+
+      {createPortal(<section id="relatorio-financeiro" className="relatorio-financeiro-print">
+        <header className="relatorio-financeiro-cabecalho">
+          <div>
+            <p className="relatorio-financeiro-marca">LVO CONSULTORIA EM TI</p>
+            <h1>Relatório de pendências de pagamento</h1>
+            <p>OS vencidas e pagamentos previstos para os próximos 3 dias.</p>
+          </div>
+          <p>Emitido em {new Date().toLocaleDateString('pt-BR')} às {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
+        </header>
+
+        <div className="relatorio-financeiro-resumo">
+          <div><span>OS vencidas</span><strong>{relatorioFinanceiro.atrasados.length}</strong><b>{relatorioFinanceiro.totalAtrasado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</b></div>
+          <div><span>Próximas do vencimento</span><strong>{relatorioFinanceiro.proximos.length}</strong><b>{relatorioFinanceiro.totalProximo.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</b></div>
+          <div><span>Total em acompanhamento</span><strong>{relatorioFinanceiro.quantidade}</strong><b>{relatorioFinanceiro.totalGeral.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</b></div>
+        </div>
+
+        {relatorioFinanceiro.atrasados.length > 0 && (
+          <section className="relatorio-financeiro-secao">
+            <h2>OS vencidas</h2>
+            <table>
+              <thead><tr><th>OS</th><th>Cliente</th><th>Plataforma</th><th>Vencimento</th><th>Prazo</th><th>Valor líquido</th></tr></thead>
+              <tbody>{relatorioFinanceiro.atrasados.map((att) => <tr key={`atrasada-${att.id}`}><td>{att.numero_os || '—'}</td><td>{att.nome_cliente || '—'}</td><td>{att.plataforma || '—'}</td><td>{formatarData(att.data_prevista_pagamento)}</td><td>{att.diasAtraso === null ? 'Não informado' : `${att.diasAtraso} ${att.diasAtraso === 1 ? 'dia em atraso' : 'dias em atraso'}`}</td><td>{calcularValorLiquido(att).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td></tr>)}</tbody>
+            </table>
+          </section>
+        )}
+
+        {relatorioFinanceiro.proximos.length > 0 && (
+          <section className="relatorio-financeiro-secao">
+            <h2>OS próximas do vencimento</h2>
+            <table>
+              <thead><tr><th>OS</th><th>Cliente</th><th>Plataforma</th><th>Vencimento</th><th>Prazo</th><th>Valor líquido</th></tr></thead>
+              <tbody>{relatorioFinanceiro.proximos.map((att) => <tr key={`proxima-${att.id}`}><td>{att.numero_os || '—'}</td><td>{att.nome_cliente || '—'}</td><td>{att.plataforma || '—'}</td><td>{formatarData(att.data_prevista_pagamento)}</td><td>{att.diasRestantes === 0 ? 'Vence hoje' : `${att.diasRestantes} ${att.diasRestantes === 1 ? 'dia restante' : 'dias restantes'}`}</td><td>{calcularValorLiquido(att).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</td></tr>)}</tbody>
+            </table>
+          </section>
+        )}
+
+        <footer>Relatório gerado pelo sistema de gestão de atendimentos LVO TI.</footer>
+      </section>, document.body)}
 
       {/* Modal de Detalhes do Calendário */}
       <Dialog open={isModalCalendarioAberto} onOpenChange={setIsModalCalendarioAberto}>
