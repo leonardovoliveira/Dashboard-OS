@@ -545,7 +545,7 @@ function Dashboard({ atendimentos }) {
         </DialogContent>
       </Dialog>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card className="dashboard-analytics-card overflow-hidden">
           <CardHeader>
             <CardTitle>Calendário de Atendimentos</CardTitle>
