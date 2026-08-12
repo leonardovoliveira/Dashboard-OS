@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import { Plus, Edit2, Trash2, Save, X, Download, Upload, Calendar, Info, ExternalLink } from 'lucide-react'
+import { Plus, Edit2, Trash2, Save, X, Download, Upload, Calendar, Info, ExternalLink, AlertTriangle } from 'lucide-react'
 
 // Função para calcular horas trabalhadas
 const calcularHoras = (checkin, checkout) => {
@@ -30,6 +30,19 @@ const calcularValorLiquido = (atendimento) => {
 }
 
 const plataformas = ['FINDUP', 'EUNERD', 'QUALLITY', 'NS SUPORTE', 'ONIX SUPORTE', 'CO&BE', 'LVO TI']
+
+const diasParaVencimento = (atendimento) => {
+  if (atendimento.status !== 'Aguardando Pagamento' || !atendimento.data_prevista_pagamento) return null
+
+  const hoje = new Date()
+  hoje.setHours(0, 0, 0, 0)
+  const [ano, mes, dia] = atendimento.data_prevista_pagamento.split('-').map(Number)
+  const vencimento = new Date(ano, mes - 1, dia)
+  vencimento.setHours(0, 0, 0, 0)
+  const dias = Math.round((vencimento - hoje) / 86400000)
+
+  return dias >= 0 && dias <= 3 ? dias : null
+}
 
 const getPlataformaColorClass = (plataforma) => {
   switch (plataforma) {
@@ -63,11 +76,13 @@ const AtendimentoRow = ({
   onViewDetails
 }) => {
   const dataAtendimentoFormatada = atendimento.data_atendimento ? new Date(atendimento.data_atendimento + 'T03:00:00Z').toLocaleDateString('pt-BR') : '';
+  const diasRestantes = diasParaVencimento(atendimento);
+  const vencimentoProximo = diasRestantes !== null;
   
   return (
     <tr 
       key={atendimento.id} 
-      className={`hover:bg-accent/50 transition-colors cursor-pointer ${isSelected ? 'bg-accent/50' : ''}`}
+      className={`cursor-pointer transition-colors hover:bg-accent/50 ${isSelected ? 'bg-accent/50' : ''} ${vencimentoProximo ? 'bg-amber-500/[0.045]' : ''}`}
       onClick={() => onViewDetails(atendimento)}
     >
       <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
@@ -88,14 +103,22 @@ const AtendimentoRow = ({
         {calcularValorLiquido(atendimento).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
       </td>
       <td className="px-3 py-3 text-sm">
-        <span className={`px-2 py-1 rounded text-xs font-medium ${
-          atendimento.status === 'Pago' ? 'bg-green-100/10 text-green-400' :
-          atendimento.status === 'Aguardando Pagamento' ? 'bg-yellow-100/10 text-yellow-400' :
-          atendimento.status === 'Pagamento Atrasado' ? 'bg-red-100/10 text-red-400' :
-          'bg-muted text-muted-foreground'
-        }`}>
-          {atendimento.status}
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={`rounded px-2 py-1 text-xs font-medium ${
+            atendimento.status === 'Pago' ? 'bg-green-100/10 text-green-400' :
+            atendimento.status === 'Aguardando Pagamento' ? 'bg-yellow-100/10 text-yellow-400' :
+            atendimento.status === 'Pagamento Atrasado' ? 'bg-red-100/10 text-red-400' :
+            'bg-muted text-muted-foreground'
+          }`}>
+            {atendimento.status}
+          </span>
+          {vencimentoProximo && (
+            <span className="inline-flex items-center gap-1 rounded bg-amber-500/15 px-2 py-1 text-xs font-semibold text-amber-500" title={`Vencimento em ${atendimento.data_prevista_pagamento}`}>
+              <AlertTriangle className="h-3.5 w-3.5" />
+              {diasRestantes === 0 ? 'Vence hoje' : `${diasRestantes} ${diasRestantes === 1 ? 'dia' : 'dias'}`}
+            </span>
+          )}
+        </div>
       </td>
       <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
         <div className="flex gap-2">
@@ -124,6 +147,8 @@ const AtendimentoCardMobile = ({ atendimento, handleExcluir, isSelected, toggleS
   const dataAtendimentoFormatada = atendimento.data_atendimento
     ? new Date(atendimento.data_atendimento + 'T03:00:00Z').toLocaleDateString('pt-BR')
     : 'Data não informada'
+  const diasRestantes = diasParaVencimento(atendimento)
+  const vencimentoProximo = diasRestantes !== null
 
   const statusClass = atendimento.status === 'Pago'
     ? 'bg-green-100/10 text-green-400'
@@ -136,7 +161,7 @@ const AtendimentoCardMobile = ({ atendimento, handleExcluir, isSelected, toggleS
   return (
     <article
       onClick={() => onViewDetails(atendimento)}
-      className={`cursor-pointer rounded-lg border p-4 transition-colors hover:bg-accent/50 ${isSelected ? 'border-primary bg-primary/5' : 'border-border bg-card'}`}
+      className={`cursor-pointer rounded-lg border p-4 transition-colors hover:bg-accent/50 ${isSelected ? 'border-primary bg-primary/5' : vencimentoProximo ? 'border-amber-400/50 bg-amber-500/[0.045]' : 'border-border bg-card'}`}
     >
       <div className="flex items-start gap-3">
         <div className="pt-0.5" onClick={(e) => e.stopPropagation()}>
@@ -168,7 +193,15 @@ const AtendimentoCardMobile = ({ atendimento, handleExcluir, isSelected, toggleS
             </span>
           </div>
           <div className="mt-3 flex items-end justify-between gap-3 border-t border-border pt-3">
-            <span className={`rounded px-2 py-1 text-xs font-medium ${statusClass}`}>{atendimento.status}</span>
+            <div className="flex flex-col items-start gap-2">
+              <span className={`rounded px-2 py-1 text-xs font-medium ${statusClass}`}>{atendimento.status}</span>
+              {vencimentoProximo && (
+                <span className="inline-flex items-center gap-1 rounded bg-amber-500/15 px-2 py-1 text-xs font-semibold text-amber-500">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  {diasRestantes === 0 ? 'Vence hoje' : `Vence em ${diasRestantes} ${diasRestantes === 1 ? 'dia' : 'dias'}`}
+                </span>
+              )}
+            </div>
             <div className="text-right">
               <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">Valor líquido</p>
               <p className="text-base font-bold text-green-500">

@@ -120,6 +120,7 @@ function Dashboard({ atendimentos }) {
   const [dataExibicao, setDataExibicao] = useState(new Date())
   const [isModalAberto, setIsModalAberto] = useState(false)
   const [isModalAtrasadosAberto, setIsModalAtrasadosAberto] = useState(false)
+  const [isModalVencimentosAberto, setIsModalVencimentosAberto] = useState(false)
   const [isModalCalendarioAberto, setIsModalCalendarioAberto] = useState(false)
   const [atendimentosDiaSelecionado, setAtendimentosDiaSelecionado] = useState([])
   const [dataSelecionada, setDataSelecionada] = useState('')
@@ -209,6 +210,31 @@ function Dashboard({ atendimentos }) {
       atendimentos: atendimentosAtrasados
     };
   }, [atendimentos]);
+
+  // Alerta preventivo: somente pagamentos pendentes que vencem hoje ou nos próximos três dias.
+  const vencimentosProximos = useMemo(() => {
+    const hoje = new Date()
+    hoje.setHours(0, 0, 0, 0)
+    const itens = atendimentos
+      .filter((atendimento) => atendimento.status === 'Aguardando Pagamento' && atendimento.data_prevista_pagamento)
+      .map((atendimento) => {
+        const [ano, mes, dia] = atendimento.data_prevista_pagamento.split('-').map(Number)
+        const vencimento = new Date(ano, mes - 1, dia)
+        vencimento.setHours(0, 0, 0, 0)
+        const diasRestantes = Math.round((vencimento - hoje) / 86400000)
+        return { ...atendimento, diasRestantes }
+      })
+      .filter((atendimento) => atendimento.diasRestantes >= 0 && atendimento.diasRestantes <= 3)
+      .sort((a, b) => a.diasRestantes - b.diasRestantes)
+
+    if (itens.length === 0) return null
+
+    return {
+      quantidade: itens.length,
+      valor: itens.reduce((total, atendimento) => total + calcularValorLiquido(atendimento), 0),
+      atendimentos: itens
+    }
+  }, [atendimentos])
 
   const estatisticas = useMemo(() => {
     const anoExibicao = dataExibicao.getFullYear()
@@ -339,6 +365,23 @@ function Dashboard({ atendimentos }) {
           {new Date(dataExibicao).toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
         </div>
       </div>
+
+      {vencimentosProximos && (
+        <button
+          type="button"
+          onClick={() => setIsModalVencimentosAberto(true)}
+          className="flex w-full flex-col gap-3 rounded-2xl border border-amber-400/40 bg-amber-500/[0.08] px-4 py-3 text-left shadow-lg shadow-amber-950/10 transition-all hover:border-amber-400/65 hover:bg-amber-500/[0.12] sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div className="flex items-start gap-3 sm:items-center">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-500"><AlertTriangle className="h-5 w-5" /></span>
+            <div>
+              <p className="text-sm font-bold text-amber-500">Atenção: vencimento próximo</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">{vencimentosProximos.quantidade} {vencimentosProximos.quantidade === 1 ? 'OS vence' : 'OS vencem'} nos próximos 3 dias. Clique para ver os detalhes.</p>
+            </div>
+          </div>
+          <span className="text-lg font-bold text-amber-500">{vencimentosProximos.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+        </button>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
         {/* Card Pagamento Atrasado */}
@@ -501,6 +544,37 @@ function Dashboard({ atendimentos }) {
             <span className="text-xl font-bold text-red-500">
               {pagamentosAtrasados?.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
             </span>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Detalhes de Vencimentos Próximos */}
+      <Dialog open={isModalVencimentosAberto} onOpenChange={setIsModalVencimentosAberto}>
+        <DialogContent className="max-h-[88vh] w-[calc(100%-2rem)] max-w-md overflow-y-auto p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-500">
+              <AlertTriangle className="h-5 w-5" />
+              Vencimentos Próximos
+            </DialogTitle>
+            <DialogDescription>
+              Pagamentos pendentes com vencimento previsto para hoje ou os próximos 3 dias.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] space-y-3 overflow-y-auto py-4">
+            {vencimentosProximos?.atendimentos.map((att) => (
+              <div key={att.id} className="flex flex-col gap-2 rounded-lg border border-amber-500/25 bg-amber-500/[0.06] p-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-bold">OS: {att.numero_os}</p>
+                  <p className="text-xs text-muted-foreground">Vencimento: {new Date(att.data_prevista_pagamento + 'T03:00:00Z').toLocaleDateString('pt-BR')} · {att.diasRestantes === 0 ? 'vence hoje' : `vence em ${att.diasRestantes} ${att.diasRestantes === 1 ? 'dia' : 'dias'}`}</p>
+                  <p className="text-xs font-medium text-primary">{att.plataforma}</p>
+                </div>
+                <p className="text-left text-sm font-bold text-amber-500 sm:text-right">{calcularValorLiquido(att).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-between border-t pt-4">
+            <span className="font-bold">Total próximo do vencimento:</span>
+            <span className="text-xl font-bold text-amber-500">{vencimentosProximos?.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
           </div>
         </DialogContent>
       </Dialog>
