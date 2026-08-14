@@ -154,6 +154,35 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
 
   const formatarData = (data) => data ? new Date(`${data}T03:00:00Z`).toLocaleDateString('pt-BR') : 'Não informada'
 
+  // Uma invoice é derivada automaticamente da combinação plataforma + previsão de pagamento.
+  // Registros sem data prevista permanecem isolados, pois não podem compor o mesmo grupo de vencimento.
+  const criarInvoices = (listaAtendimentos) => {
+    const grupos = listaAtendimentos.reduce((acumulador, atendimento) => {
+      const plataforma = atendimento.plataforma || 'Plataforma não informada'
+      const data = atendimento.data_prevista_pagamento || ''
+      const chave = data ? `${plataforma}__${data}` : `${plataforma}__sem-data__${atendimento.id}`
+
+      if (!acumulador[chave]) {
+        acumulador[chave] = {
+          id: `invoice-${chave}`,
+          plataforma,
+          data,
+          atendimentos: []
+        }
+      }
+      acumulador[chave].atendimentos.push(atendimento)
+      return acumulador
+    }, {})
+
+    return Object.values(grupos)
+      .map((invoice) => ({
+        ...invoice,
+        quantidadeOS: invoice.atendimentos.length,
+        valor: invoice.atendimentos.reduce((total, atendimento) => total + calcularValorLiquido(atendimento), 0)
+      }))
+      .sort((a, b) => (a.data || '9999-12-31').localeCompare(b.data || '9999-12-31'))
+  }
+
   const diasComAtendimentos = useMemo(() => {
     const dias = new Set()
     atendimentos.forEach(atendimento => {
@@ -193,30 +222,36 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
   }, [atendimentos, dataExibicao])
 
   const proximoPagamento = useMemo(() => {
-    const atendimentosAguardando = atendimentos.filter(a => a.status === 'Aguardando Pagamento' && a.data_prevista_pagamento);
-    if (atendimentosAguardando.length === 0) return null;
-    const datasOrdenadas = [...new Set(atendimentosAguardando.map(a => a.data_prevista_pagamento))].sort();
-    const dataMaisProxima = datasOrdenadas[0];
-    const atendimentosNaData = atendimentosAguardando.filter(a => a.data_prevista_pagamento === dataMaisProxima);
-    const totalAReceber = atendimentosNaData.reduce((acc, a) => acc + calcularValorLiquido(a), 0);
+    const atendimentosAguardando = atendimentos.filter((atendimento) => atendimento.status === 'Aguardando Pagamento' && atendimento.data_prevista_pagamento)
+    if (atendimentosAguardando.length === 0) return null
+
+    const dataMaisProxima = [...new Set(atendimentosAguardando.map((atendimento) => atendimento.data_prevista_pagamento))].sort()[0]
+    const invoices = criarInvoices(atendimentosAguardando.filter((atendimento) => atendimento.data_prevista_pagamento === dataMaisProxima))
+    const atendimentosDaData = invoices.flatMap((invoice) => invoice.atendimentos)
+
     return {
-      valor: totalAReceber,
+      valor: invoices.reduce((total, invoice) => total + invoice.valor, 0),
       data: dataMaisProxima,
-      quantidade: atendimentosNaData.length,
-      atendimentos: atendimentosNaData
-    };
-  }, [atendimentos]);
+      quantidade: invoices.length,
+      quantidadeOS: atendimentosDaData.length,
+      invoices,
+      atendimentos: atendimentosDaData
+    }
+  }, [atendimentos])
 
   const pagamentosAtrasados = useMemo(() => {
-    const atendimentosAtrasados = atendimentos.filter(a => a.status === 'Pagamento Atrasado');
-    if (atendimentosAtrasados.length === 0) return null;
-    const totalAtrasado = atendimentosAtrasados.reduce((acc, a) => acc + calcularValorLiquido(a), 0);
+    const atendimentosAtrasados = atendimentos.filter((atendimento) => atendimento.status === 'Pagamento Atrasado')
+    if (atendimentosAtrasados.length === 0) return null
+
+    const invoices = criarInvoices(atendimentosAtrasados)
     return {
-      valor: totalAtrasado,
-      quantidade: atendimentosAtrasados.length,
+      valor: invoices.reduce((total, invoice) => total + invoice.valor, 0),
+      quantidade: invoices.length,
+      quantidadeOS: atendimentosAtrasados.length,
+      invoices,
       atendimentos: atendimentosAtrasados
-    };
-  }, [atendimentos]);
+    }
+  }, [atendimentos])
 
   // Alerta preventivo: somente pagamentos pendentes que vencem hoje ou nos próximos três dias.
   const vencimentosProximos = useMemo(() => {
@@ -236,9 +271,16 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
 
     if (itens.length === 0) return null
 
+    const invoices = criarInvoices(itens).map((invoice) => ({
+      ...invoice,
+      diasRestantes: invoice.atendimentos[0].diasRestantes
+    }))
+
     return {
-      quantidade: itens.length,
-      valor: itens.reduce((total, atendimento) => total + calcularValorLiquido(atendimento), 0),
+      quantidade: invoices.length,
+      quantidadeOS: itens.length,
+      valor: invoices.reduce((total, invoice) => total + invoice.valor, 0),
+      invoices,
       atendimentos: itens
     }
   }, [atendimentos])
@@ -270,13 +312,14 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
     }
   }, [atendimentos, vencimentosProximos])
 
-  const atualizarStatusPagamento = async (id, status) => {
+  const atualizarStatusPagamento = async (idsAtendimentos, status, idAtualizacao = idsAtendimentos) => {
     if (!onAtualizarAtendimentos) return false
+    const ids = Array.isArray(idsAtendimentos) ? idsAtendimentos : [idsAtendimentos]
     setErroAtualizacaoStatus('')
-    setOsAtualizandoId(id)
+    setOsAtualizandoId(idAtualizacao)
     try {
       await onAtualizarAtendimentos(atendimentos.map((atendimento) => (
-        atendimento.id === id ? { ...atendimento, status } : atendimento
+        ids.includes(atendimento.id) ? { ...atendimento, status } : atendimento
       )))
       return true
     } catch {
@@ -287,8 +330,12 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
     }
   }
 
-  const confirmarPagamentoAtrasado = async (id) => {
-    const pagamentoConfirmado = await atualizarStatusPagamento(id, 'Pago')
+  const atualizarStatusDaInvoice = (invoice, status) => {
+    return atualizarStatusPagamento(invoice.atendimentos.map((atendimento) => atendimento.id), status, invoice.id)
+  }
+
+  const confirmarPagamentoAtrasado = async (invoice) => {
+    const pagamentoConfirmado = await atualizarStatusDaInvoice(invoice, 'Pago')
     if (pagamentoConfirmado && pagamentosAtrasados?.quantidade === 1) {
       setIsModalAtrasadosAberto(false)
     }
@@ -445,7 +492,7 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-500"><AlertTriangle className="h-5 w-5" /></span>
             <div>
               <p className="text-sm font-bold text-amber-500">Atenção: vencimento próximo</p>
-              <p className="mt-0.5 text-sm text-muted-foreground">{vencimentosProximos.quantidade} {vencimentosProximos.quantidade === 1 ? 'OS vence' : 'OS vencem'} nos próximos 3 dias. Clique para ver os detalhes.</p>
+              <p className="mt-0.5 text-sm text-muted-foreground">{vencimentosProximos.quantidade} {vencimentosProximos.quantidade === 1 ? 'invoice vence' : 'invoices vencem'} nos próximos 3 dias ({vencimentosProximos.quantidadeOS} {vencimentosProximos.quantidadeOS === 1 ? 'OS associada' : 'OS associadas'}). Clique para ver os detalhes.</p>
             </div>
           </div>
           <span className="text-lg font-bold text-amber-500">{vencimentosProximos.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
@@ -466,8 +513,8 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
               </div>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 {pagamentosAtrasados 
-                  ? <>{pagamentosAtrasados.quantidade} OS com pagamento pendente <Info className="w-3 h-3" /></>
-                  : 'Nenhum pagamento atrasado.'}
+                  ? <>{pagamentosAtrasados.quantidade} {pagamentosAtrasados.quantidade === 1 ? 'invoice em atraso' : 'invoices em atraso'} ({pagamentosAtrasados.quantidadeOS} {pagamentosAtrasados.quantidadeOS === 1 ? 'OS' : 'OS'}) <Info className="w-3 h-3" /></>
+                  : 'Nenhuma invoice em atraso.'}
               </p>
             </CardContent>
           </Card>
@@ -477,7 +524,7 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
         <div onClick={() => proximoPagamento && setIsModalAberto(true)} className="cursor-pointer block hover:shadow-lg transition-shadow rounded-lg">
           <Card className="metric-card h-full border-emerald-400/35 bg-emerald-500/[0.035]">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Próximo Pagamento</CardTitle>
+              <CardTitle className="text-sm font-medium">Próxima Invoice</CardTitle>
               <span className="metric-icon bg-emerald-500/12 text-emerald-500"><DollarSign className="h-4 w-4" /></span>
             </CardHeader>
             <CardContent>
@@ -486,8 +533,8 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
               </div>
               <p className="text-xs text-muted-foreground flex items-center gap-1">
                 {proximoPagamento 
-                  ? <>Previsto para {new Date(proximoPagamento.data + 'T03:00:00Z').toLocaleDateString('pt-BR')} ({proximoPagamento.quantidade} OS) <Info className="w-3 h-3" /></>
-                  : 'Nenhum pagamento aguardando.'}
+                  ? <>Previsto para {formatarData(proximoPagamento.data)} ({proximoPagamento.quantidade} {proximoPagamento.quantidade === 1 ? 'invoice' : 'invoices'} · {proximoPagamento.quantidadeOS} OS) <Info className="w-3 h-3" /></>
+                  : 'Nenhuma invoice aguardando pagamento.'}
               </p>
             </CardContent>
           </Card>
@@ -550,23 +597,24 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
       <Dialog open={isModalAberto} onOpenChange={setIsModalAberto}>
         <DialogContent className="max-h-[88vh] w-[calc(100%-2rem)] max-w-md overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
-            <DialogTitle>Detalhes do Próximo Pagamento</DialogTitle>
+            <DialogTitle>Detalhes da Próxima Invoice</DialogTitle>
             <DialogDescription>
-              Atendimentos previstos para {proximoPagamento && new Date(proximoPagamento.data + 'T03:00:00Z').toLocaleDateString('pt-BR')}
+              Invoices previstas para {proximoPagamento && formatarData(proximoPagamento.data)}.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-            {proximoPagamento?.atendimentos.map((att) => (
-              <div key={att.id} className="flex flex-col gap-2 rounded-lg border bg-accent/50 p-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="space-y-1">
-                  <p className="text-sm font-bold">OS: {att.numero_os}</p>
-                  <p className="text-xs text-muted-foreground">Realizado em: {new Date(att.data_atendimento + 'T03:00:00Z').toLocaleDateString('pt-BR')}</p>
-                  <p className="text-xs font-medium text-primary">{att.plataforma}</p>
+            {proximoPagamento?.invoices.map((invoice) => (
+              <div key={invoice.id} className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.05] p-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold">Invoice · {invoice.plataforma}</p>
+                    <p className="text-xs text-muted-foreground">Vencimento: {formatarData(invoice.data)} · {invoice.quantidadeOS} {invoice.quantidadeOS === 1 ? 'OS incluída' : 'OS incluídas'}</p>
+                  </div>
+                  <p className="text-left text-sm font-bold text-green-500 sm:text-right">{invoice.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
                 </div>
-                <div className="text-left sm:text-right">
-                  <p className="text-sm font-bold text-green-500">
-                    {calcularValorLiquido(att).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                  </p>
+                <div className="mt-3 border-t border-emerald-500/15 pt-3">
+                  <p className="text-xs font-semibold text-muted-foreground">OS da invoice</p>
+                  <p className="mt-1 text-xs text-foreground">{invoice.atendimentos.map((att) => att.numero_os || 'OS sem número').join(' · ')}</p>
                 </div>
               </div>
             ))}
@@ -589,35 +637,34 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
               Pagamentos Atrasados
             </DialogTitle>
             <DialogDescription>
-              Lista de atendimentos com status de pagamento atrasado.
+              Invoices com pagamentos em atraso. A confirmação atualiza todas as OS da invoice.
             </DialogDescription>
           </DialogHeader>
           {erroAtualizacaoStatus && <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-500">{erroAtualizacaoStatus}</p>}
           <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
-            {pagamentosAtrasados?.atendimentos.map((att) => (
-              <div key={att.id} className="rounded-lg border border-red-500/20 bg-red-500/5 p-3">
+            {pagamentosAtrasados?.invoices.map((invoice) => (
+              <div key={invoice.id} className="rounded-lg border border-red-500/20 bg-red-500/5 p-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="space-y-1">
-                    <p className="text-sm font-bold">OS: {att.numero_os}</p>
-                    <p className="text-xs text-muted-foreground">Vencimento: {formatarData(att.data_prevista_pagamento)}</p>
-                    <p className="text-xs font-medium text-primary">{att.plataforma}</p>
+                    <p className="text-sm font-bold">Invoice · {invoice.plataforma}</p>
+                    <p className="text-xs text-muted-foreground">Vencimento: {formatarData(invoice.data)} · {invoice.quantidadeOS} {invoice.quantidadeOS === 1 ? 'OS incluída' : 'OS incluídas'}</p>
                   </div>
-                  <div className="text-left sm:text-right">
-                    <p className="text-sm font-bold text-red-500">
-                      {calcularValorLiquido(att).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                    </p>
-                  </div>
+                  <p className="text-left text-sm font-bold text-red-500 sm:text-right">{invoice.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                </div>
+                <div className="mt-3 border-t border-red-500/15 pt-3">
+                  <p className="text-xs font-semibold text-muted-foreground">OS da invoice</p>
+                  <p className="mt-1 text-xs text-foreground">{invoice.atendimentos.map((att) => att.numero_os || 'OS sem número').join(' · ')}</p>
                 </div>
                 <div className="mt-3 flex justify-end border-t border-red-500/15 pt-3">
                   <Button
                     type="button"
                     size="sm"
-                    onClick={() => confirmarPagamentoAtrasado(att.id)}
-                    disabled={osAtualizandoId === att.id}
+                    onClick={() => confirmarPagamentoAtrasado(invoice)}
+                    disabled={osAtualizandoId === invoice.id}
                     className="w-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto"
                   >
                     <CheckCircle2 className="mr-2 h-4 w-4" />
-                    {osAtualizandoId === att.id ? 'Confirmando...' : 'Confirmar pagamento'}
+                    {osAtualizandoId === invoice.id ? 'Confirmando invoice...' : 'Confirmar pagamento da invoice'}
                   </Button>
                 </div>
               </div>
@@ -641,25 +688,28 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
               Vencimentos Próximos
             </DialogTitle>
             <DialogDescription>
-              Pagamentos pendentes com vencimento previsto para hoje ou os próximos 3 dias.
+              Invoices com vencimento previsto para hoje ou os próximos 3 dias.
             </DialogDescription>
           </DialogHeader>
           {erroAtualizacaoStatus && <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-500">{erroAtualizacaoStatus}</p>}
           <div className="max-h-[60vh] space-y-3 overflow-y-auto py-4">
-            {vencimentosProximos?.atendimentos.map((att) => (
-              <div key={att.id} className="rounded-lg border border-amber-500/25 bg-amber-500/[0.06] p-3">
+            {vencimentosProximos?.invoices.map((invoice) => (
+              <div key={invoice.id} className="rounded-lg border border-amber-500/25 bg-amber-500/[0.06] p-3">
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="space-y-1">
-                    <p className="text-sm font-bold">OS: {att.numero_os}</p>
-                    <p className="text-xs text-muted-foreground">Vencimento: {formatarData(att.data_prevista_pagamento)} · {att.diasRestantes === 0 ? 'vence hoje' : `vence em ${att.diasRestantes} ${att.diasRestantes === 1 ? 'dia' : 'dias'}`}</p>
-                    <p className="text-xs font-medium text-primary">{att.plataforma}</p>
+                    <p className="text-sm font-bold">Invoice · {invoice.plataforma}</p>
+                    <p className="text-xs text-muted-foreground">Vencimento: {formatarData(invoice.data)} · {invoice.diasRestantes === 0 ? 'vence hoje' : `vence em ${invoice.diasRestantes} ${invoice.diasRestantes === 1 ? 'dia' : 'dias'}`} · {invoice.quantidadeOS} {invoice.quantidadeOS === 1 ? 'OS incluída' : 'OS incluídas'}</p>
                   </div>
-                  <p className="text-left text-sm font-bold text-amber-500 sm:text-right">{calcularValorLiquido(att).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                  <p className="text-left text-sm font-bold text-amber-500 sm:text-right">{invoice.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</p>
+                </div>
+                <div className="mt-3 border-t border-amber-500/15 pt-3">
+                  <p className="text-xs font-semibold text-muted-foreground">OS da invoice</p>
+                  <p className="mt-1 text-xs text-foreground">{invoice.atendimentos.map((att) => att.numero_os || 'OS sem número').join(' · ')}</p>
                 </div>
                 <div className="mt-3 flex flex-col gap-2 border-t border-amber-500/15 pt-3 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-xs font-semibold text-muted-foreground">Atualizar status de pagamento</p>
-                  <Select value={att.status} onValueChange={(status) => atualizarStatusPagamento(att.id, status)} disabled={osAtualizandoId === att.id}>
-                    <SelectTrigger className="h-9 w-full bg-card/70 text-xs sm:w-[210px]" aria-label={`Status de pagamento da OS ${att.numero_os}`}>
+                  <p className="text-xs font-semibold text-muted-foreground">Atualizar status de toda a invoice</p>
+                  <Select value={invoice.atendimentos[0].status} onValueChange={(status) => atualizarStatusDaInvoice(invoice, status)} disabled={osAtualizandoId === invoice.id}>
+                    <SelectTrigger className="h-9 w-full bg-card/70 text-xs sm:w-[210px]" aria-label={`Status de pagamento da invoice ${invoice.plataforma} ${formatarData(invoice.data)}`}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -673,7 +723,7 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
             ))}
           </div>
           <div className="flex items-center justify-between border-t pt-4">
-            <span className="font-bold">Total próximo do vencimento:</span>
+            <span className="font-bold">Total das invoices próximas:</span>
             <span className="text-xl font-bold text-amber-500">{vencimentosProximos?.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
           </div>
         </DialogContent>
