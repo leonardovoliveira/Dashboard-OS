@@ -2,7 +2,7 @@ import { Component, lazy, Suspense, useEffect, useMemo, useRef, useState } from 
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Calendar, TrendingUp, DollarSign, Clock, ChevronLeft, ChevronRight, Info, AlertTriangle, FileDown } from 'lucide-react'
+import { Calendar, TrendingUp, DollarSign, Clock, ChevronLeft, ChevronRight, Info, AlertTriangle, FileDown, CheckCircle2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -271,17 +271,26 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
   }, [atendimentos, vencimentosProximos])
 
   const atualizarStatusPagamento = async (id, status) => {
-    if (!onAtualizarAtendimentos) return
+    if (!onAtualizarAtendimentos) return false
     setErroAtualizacaoStatus('')
     setOsAtualizandoId(id)
     try {
       await onAtualizarAtendimentos(atendimentos.map((atendimento) => (
         atendimento.id === id ? { ...atendimento, status } : atendimento
       )))
+      return true
     } catch {
       setErroAtualizacaoStatus('Não foi possível salvar o novo status. Tente novamente.')
+      return false
     } finally {
       setOsAtualizandoId(null)
+    }
+  }
+
+  const confirmarPagamentoAtrasado = async (id) => {
+    const pagamentoConfirmado = await atualizarStatusPagamento(id, 'Pago')
+    if (pagamentoConfirmado && pagamentosAtrasados?.quantidade === 1) {
+      setIsModalAtrasadosAberto(false)
     }
   }
 
@@ -583,18 +592,33 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
               Lista de atendimentos com status de pagamento atrasado.
             </DialogDescription>
           </DialogHeader>
+          {erroAtualizacaoStatus && <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-500">{erroAtualizacaoStatus}</p>}
           <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
             {pagamentosAtrasados?.atendimentos.map((att) => (
-              <div key={att.id} className="flex flex-col gap-2 rounded-lg border border-red-500/20 bg-red-500/5 p-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="space-y-1">
-                  <p className="text-sm font-bold">OS: {att.numero_os}</p>
-                  <p className="text-xs text-muted-foreground">Vencimento: {att.data_prevista_pagamento ? new Date(att.data_prevista_pagamento + 'T03:00:00Z').toLocaleDateString('pt-BR') : 'Não informada'}</p>
-                  <p className="text-xs font-medium text-primary">{att.plataforma}</p>
+              <div key={att.id} className="rounded-lg border border-red-500/20 bg-red-500/5 p-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-bold">OS: {att.numero_os}</p>
+                    <p className="text-xs text-muted-foreground">Vencimento: {formatarData(att.data_prevista_pagamento)}</p>
+                    <p className="text-xs font-medium text-primary">{att.plataforma}</p>
+                  </div>
+                  <div className="text-left sm:text-right">
+                    <p className="text-sm font-bold text-red-500">
+                      {calcularValorLiquido(att).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-left sm:text-right">
-                  <p className="text-sm font-bold text-red-500">
-                    {calcularValorLiquido(att).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                  </p>
+                <div className="mt-3 flex justify-end border-t border-red-500/15 pt-3">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => confirmarPagamentoAtrasado(att.id)}
+                    disabled={osAtualizandoId === att.id}
+                    className="w-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto"
+                  >
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    {osAtualizandoId === att.id ? 'Confirmando...' : 'Confirmar pagamento'}
+                  </Button>
                 </div>
               </div>
             ))}

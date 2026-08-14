@@ -227,6 +227,7 @@ function Extrato({ atendimentos: propAtendimentos = [], setAtendimentos: setProp
   const [localAtendimentos, setLocalAtendimentos] = useState(propAtendimentos);
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkStatus, setBulkStatus] = useState('');
+  const [bulkDataPrevistaPagamento, setBulkDataPrevistaPagamento] = useState('');
   const [atendimentoDetalhe, setAtendimentoDetalhe] = useState(null);
   const [isEditando, setIsEditando] = useState(false);
   const [atendimentoEditado, setAtendimentoEditado] = useState(null);
@@ -295,11 +296,26 @@ function Extrato({ atendimentos: propAtendimentos = [], setAtendimentos: setProp
     setSelectedIds(selectedIds.length === atendimentosFiltrados.length ? [] : atendimentosFiltrados.map(a => a.id));
   };
 
-  const handleBulkStatusUpdate = () => {
-    if (!bulkStatus) return;
-    setLocalAtendimentos(localAtendimentos.map(att => selectedIds.includes(att.id) ? { ...att, status: bulkStatus } : att));
+  const handleBulkUpdate = () => {
+    if (!bulkStatus && !bulkDataPrevistaPagamento) return;
+
+    setLocalAtendimentos(localAtendimentos.map((att) => {
+      if (!selectedIds.includes(att.id)) return att;
+      return {
+        ...att,
+        ...(bulkStatus ? { status: bulkStatus } : {}),
+        ...(bulkDataPrevistaPagamento ? { data_prevista_pagamento: bulkDataPrevistaPagamento } : {})
+      };
+    }));
     setSelectedIds([]);
     setBulkStatus('');
+    setBulkDataPrevistaPagamento('');
+  };
+
+  const handleCancelarEdicaoLote = () => {
+    setSelectedIds([]);
+    setBulkStatus('');
+    setBulkDataPrevistaPagamento('');
   };
 
   const handleSalvarEdicao = () => {
@@ -334,15 +350,28 @@ function Extrato({ atendimentos: propAtendimentos = [], setAtendimentos: setProp
           <CardContent className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
               <span className="text-sm font-medium text-primary">{selectedIds.length} itens selecionados</span>
-              <div className="flex flex-col gap-2 min-[420px]:flex-row">
-                <Select value={bulkStatus} onValueChange={setBulkStatus}>
-                  <SelectTrigger className="h-10 w-full min-[420px]:w-[200px]"><SelectValue placeholder="Alterar status para..." /></SelectTrigger>
-                  <SelectContent>{statusOpcoes.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
-                </Select>
-                <Button size="sm" className="h-10" onClick={handleBulkStatusUpdate} disabled={!bulkStatus}>Aplicar</Button>
+              <div className="flex flex-col gap-2 min-[420px]:flex-row min-[700px]:items-end">
+                <div className="space-y-1">
+                  <span className="text-xs font-medium text-muted-foreground">Status</span>
+                  <Select value={bulkStatus} onValueChange={setBulkStatus}>
+                    <SelectTrigger className="h-10 w-full min-[420px]:w-[200px]"><SelectValue placeholder="Alterar status para..." /></SelectTrigger>
+                    <SelectContent>{statusOpcoes.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="bulk-data-prevista" className="text-xs font-medium text-muted-foreground">Previsão de pagamento</Label>
+                  <Input
+                    id="bulk-data-prevista"
+                    type="date"
+                    value={bulkDataPrevistaPagamento}
+                    onChange={(e) => setBulkDataPrevistaPagamento(e.target.value)}
+                    className="h-10 w-full min-[420px]:w-[185px]"
+                  />
+                </div>
+                <Button size="sm" className="h-10 min-[420px]:self-end" onClick={handleBulkUpdate} disabled={!bulkStatus && !bulkDataPrevistaPagamento}>Aplicar alterações</Button>
               </div>
             </div>
-            <Button variant="ghost" size="sm" className="self-start sm:self-auto" onClick={() => setSelectedIds([])}>Cancelar</Button>
+            <Button variant="ghost" size="sm" className="self-start sm:self-auto" onClick={handleCancelarEdicaoLote}>Cancelar</Button>
           </CardContent>
         </Card>
       )}
