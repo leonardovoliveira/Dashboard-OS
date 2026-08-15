@@ -341,6 +341,13 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
     }
   }
 
+  const registrarPagamentoDaInvoice = async (invoice) => {
+    const pagamentoConfirmado = await atualizarStatusDaInvoice(invoice, 'Pago')
+    if (pagamentoConfirmado && proximoPagamento?.quantidade === 1) {
+      setIsModalAberto(false)
+    }
+  }
+
   const exportarRelatorioPDF = () => {
     window.print()
   }
@@ -599,9 +606,10 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
           <DialogHeader>
             <DialogTitle>Detalhes da Próxima Invoice</DialogTitle>
             <DialogDescription>
-              Invoices previstas para {proximoPagamento && formatarData(proximoPagamento.data)}.
+              Invoices previstas para {proximoPagamento && formatarData(proximoPagamento.data)}. Registre o pagamento para atualizar todas as OS da invoice.
             </DialogDescription>
           </DialogHeader>
+          {erroAtualizacaoStatus && <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-red-500">{erroAtualizacaoStatus}</p>}
           <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
             {proximoPagamento?.invoices.map((invoice) => (
               <div key={invoice.id} className="rounded-lg border border-emerald-500/20 bg-emerald-500/[0.05] p-3">
@@ -615,6 +623,18 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
                 <div className="mt-3 border-t border-emerald-500/15 pt-3">
                   <p className="text-xs font-semibold text-muted-foreground">OS da invoice</p>
                   <p className="mt-1 text-xs text-foreground">{invoice.atendimentos.map((att) => att.numero_os || 'OS sem número').join(' · ')}</p>
+                </div>
+                <div className="mt-3 flex justify-end border-t border-emerald-500/15 pt-3">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => registrarPagamentoDaInvoice(invoice)}
+                    disabled={osAtualizandoId === invoice.id}
+                    className="w-full bg-emerald-600 text-white hover:bg-emerald-700 sm:w-auto"
+                  >
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    {osAtualizandoId === invoice.id ? 'Registrando pagamento...' : 'Registrar pagamento da invoice'}
+                  </Button>
                 </div>
               </div>
             ))}
