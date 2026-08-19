@@ -2,7 +2,7 @@ import { Component, lazy, Suspense, useEffect, useMemo, useRef, useState } from 
 import { createPortal } from 'react-dom'
 import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Calendar, TrendingUp, DollarSign, Clock, ChevronLeft, ChevronRight, Info, AlertTriangle, FileDown, CheckCircle2 } from 'lucide-react'
+import { Calendar, TrendingUp, DollarSign, Clock, ChevronLeft, ChevronRight, AlertTriangle, FileDown, CheckCircle2 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -129,6 +129,7 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
   const [dataSelecionada, setDataSelecionada] = useState('')
   const [osAtualizandoId, setOsAtualizandoId] = useState(null)
   const [erroAtualizacaoStatus, setErroAtualizacaoStatus] = useState('')
+  const [invoiceSelecionadaId, setInvoiceSelecionadaId] = useState('')
 
   const calcularHoras = (checkin, checkout) => {
     if (!checkin || !checkout) return 0
@@ -284,6 +285,26 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
       atendimentos: itens
     }
   }, [atendimentos])
+
+  const invoicesPainel = useMemo(() => {
+    const atendimentosPendentes = atendimentos.filter((atendimento) => (
+      atendimento.status === 'Aguardando Pagamento' || atendimento.status === 'Pagamento Atrasado'
+    ) && atendimento.data_prevista_pagamento)
+
+    return criarInvoices(atendimentosPendentes)
+      .map((invoice) => ({
+        ...invoice,
+        status: invoice.atendimentos.some((atendimento) => atendimento.status === 'Pagamento Atrasado')
+          ? 'Pagamento Atrasado'
+          : 'Aguardando Pagamento'
+      }))
+      .sort((a, b) => {
+        if (a.status !== b.status) return a.status === 'Pagamento Atrasado' ? -1 : 1
+        return (a.data || '9999-12-31').localeCompare(b.data || '9999-12-31')
+      })
+  }, [atendimentos])
+
+  const invoiceSelecionada = invoicesPainel.find((invoice) => invoice.id === invoiceSelecionadaId) || invoicesPainel[0] || null
 
   const relatorioFinanceiro = useMemo(() => {
     const hoje = new Date()
@@ -469,136 +490,84 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
   }
 
   return (
-    <div className="dashboard-page space-y-5 sm:space-y-6">
-      <div className="dashboard-hero flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="invoice-dashboard space-y-6">
+      <header className="invoice-dashboard-header">
         <div>
-          <p className="surface-label">Visão geral</p>
-          <h2 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Resumo financeiro</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Acompanhe atendimentos, recebimentos e produtividade em um só lugar.</p>
+          <p className="surface-label">Financeiro · central de recebimentos</p>
+          <h2 className="mt-1 text-3xl font-black tracking-[-0.04em] text-foreground sm:text-4xl">Invoices</h2>
+          <p className="mt-2 max-w-xl text-sm text-muted-foreground">Acompanhe recebimentos, trate pendências e confirme o pagamento de cada invoice em uma única área.</p>
         </div>
-        <div className="inline-flex w-fit items-center gap-2 rounded-xl border border-border bg-card/70 px-3 py-2 text-xs font-semibold capitalize text-muted-foreground shadow-sm">
-          <Calendar className="h-4 w-4 text-primary" />
-          {new Date(dataExibicao).toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}
+        <div className="invoice-dashboard-actions">
+          <div className="invoice-period-chip"><Calendar className="h-4 w-4" />{new Date(dataExibicao).toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</div>
+          <Button type="button" variant="outline" onClick={exportarRelatorioPDF} className="invoice-export-button"><FileDown className="h-4 w-4" />Exportar PDF</Button>
         </div>
-      </div>
+      </header>
 
-      <div className="flex justify-start sm:justify-end">
-        <Button type="button" variant="outline" onClick={exportarRelatorioPDF} className="w-full gap-2 border-primary/35 bg-card/70 text-foreground hover:bg-accent sm:w-auto">
-          <FileDown className="h-4 w-4" />
-          Exportar relatório PDF
-        </Button>
-      </div>
+      <section className="invoice-insight-grid" aria-label="Indicadores de invoices">
+        <button type="button" onClick={() => pagamentosAtrasados && setIsModalAtrasadosAberto(true)} className="invoice-insight-card invoice-insight-card-danger">
+          <span className="invoice-insight-icon"><AlertTriangle className="h-4 w-4" /></span>
+          <span className="invoice-insight-label">Em atraso</span>
+          <strong>{pagamentosAtrasados ? pagamentosAtrasados.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00'}</strong>
+          <small>{pagamentosAtrasados ? `${pagamentosAtrasados.quantidade} ${pagamentosAtrasados.quantidade === 1 ? 'invoice pendente' : 'invoices pendentes'}` : 'Nenhuma pendência crítica'}</small>
+        </button>
+        <button type="button" onClick={() => proximoPagamento && setIsModalAberto(true)} className="invoice-insight-card invoice-insight-card-primary">
+          <span className="invoice-insight-icon"><DollarSign className="h-4 w-4" /></span>
+          <span className="invoice-insight-label">Próximo recebimento</span>
+          <strong>{proximoPagamento ? proximoPagamento.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00'}</strong>
+          <small>{proximoPagamento ? `${formatarData(proximoPagamento.data)} · ${proximoPagamento.quantidadeOS} OS` : 'Sem previsão de pagamento'}</small>
+        </button>
+        <article className="invoice-insight-card invoice-insight-card-neutral">
+          <span className="invoice-insight-icon"><TrendingUp className="h-4 w-4" /></span>
+          <span className="invoice-insight-label">Faturamento do mês</span>
+          <strong>{estatisticas.totalBruto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
+          <small>{estatisticas.totalAtendimentos} atendimentos realizados</small>
+        </article>
+        <Link to="/extrato" className="invoice-insight-card invoice-insight-card-action">
+          <span className="invoice-insight-icon"><Calendar className="h-4 w-4" /></span>
+          <span className="invoice-insight-label">Atendimentos</span>
+          <strong>{estatisticas.totalAtendimentos}</strong>
+          <small>Consultar extrato completo</small>
+        </Link>
+      </section>
 
       {vencimentosProximos && (
-        <button
-          type="button"
-          onClick={() => setIsModalVencimentosAberto(true)}
-          className="dashboard-alert flex w-full flex-col gap-3 rounded-2xl border border-amber-400/40 bg-amber-500/[0.08] px-4 py-3 text-left shadow-lg shadow-amber-950/10 transition-all hover:border-amber-400/65 hover:bg-amber-500/[0.12] sm:flex-row sm:items-center sm:justify-between"
-        >
-          <div className="flex items-start gap-3 sm:items-center">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-500"><AlertTriangle className="h-5 w-5" /></span>
-            <div>
-              <p className="text-sm font-bold text-amber-500">Atenção: vencimento próximo</p>
-              <p className="mt-0.5 text-sm text-muted-foreground">{vencimentosProximos.quantidade} {vencimentosProximos.quantidade === 1 ? 'invoice vence' : 'invoices vencem'} nos próximos 3 dias ({vencimentosProximos.quantidadeOS} {vencimentosProximos.quantidadeOS === 1 ? 'OS associada' : 'OS associadas'}). Clique para ver os detalhes.</p>
-            </div>
-          </div>
-          <span className="text-lg font-bold text-amber-500">{vencimentosProximos.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+        <button type="button" onClick={() => setIsModalVencimentosAberto(true)} className="invoice-due-strip">
+          <span className="invoice-due-icon"><AlertTriangle className="h-5 w-5" /></span>
+          <span className="min-w-0 text-left"><b>Vencimento próximo</b><small>{vencimentosProximos.quantidade} {vencimentosProximos.quantidade === 1 ? 'invoice vence' : 'invoices vencem'} nos próximos 3 dias · {vencimentosProximos.quantidadeOS} OS associadas</small></span>
+          <strong>{vencimentosProximos.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
         </button>
       )}
 
-      <div className="dashboard-metric-grid grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
-        {/* Card Pagamento Atrasado */}
-        <div onClick={() => pagamentosAtrasados && setIsModalAtrasadosAberto(true)} className="cursor-pointer block hover:shadow-lg transition-shadow rounded-lg">
-          <Card className="dashboard-finance-card metric-card h-full border-red-400/35 bg-red-500/[0.035]">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pagamentos Atrasados</CardTitle>
-              <span className="metric-icon bg-red-500/12 text-red-500"><AlertTriangle className="h-4 w-4" /></span>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-red-500">
-                {pagamentosAtrasados ? pagamentosAtrasados.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00'}
-              </div>
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                {pagamentosAtrasados 
-                  ? <>{pagamentosAtrasados.quantidade} {pagamentosAtrasados.quantidade === 1 ? 'invoice em atraso' : 'invoices em atraso'} ({pagamentosAtrasados.quantidadeOS} {pagamentosAtrasados.quantidadeOS === 1 ? 'OS' : 'OS'}) <Info className="w-3 h-3" /></>
-                  : 'Nenhuma invoice em atraso.'}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+      <section className="invoice-workspace">
+        <aside className="invoice-workspace-list" aria-label="Lista de invoices em aberto">
+          <div className="invoice-workspace-list-header"><div><p className="surface-label">Em acompanhamento</p><h3>Invoices abertas</h3></div><span>{invoicesPainel.length}</span></div>
+          <div className="invoice-workspace-list-body">
+            {invoicesPainel.length > 0 ? invoicesPainel.map((invoice) => (
+              <button type="button" key={invoice.id} onClick={() => setInvoiceSelecionadaId(invoice.id)} className={`invoice-list-item ${invoiceSelecionada?.id === invoice.id ? 'is-selected' : ''}`}>
+                <span className={`invoice-status ${invoice.status === 'Pagamento Atrasado' ? 'is-overdue' : 'is-open'}`}>{invoice.status === 'Pagamento Atrasado' ? 'Em atraso' : 'Em aberto'}</span>
+                <span className="invoice-list-item-main"><b>{invoice.plataforma}</b><small>{formatarData(invoice.data)} · {invoice.quantidadeOS} {invoice.quantidadeOS === 1 ? 'OS' : 'OS'}</small></span>
+                <strong>{invoice.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
+              </button>
+            )) : <div className="invoice-empty-state"><CheckCircle2 className="h-6 w-6" /><b>Nenhuma invoice em aberto</b><span>Os recebimentos pendentes aparecerão aqui.</span></div>}
+          </div>
+          <Link to="/extrato" className="invoice-workspace-link">Abrir extrato de atendimentos <span>→</span></Link>
+        </aside>
 
-        {/* Card Próximo Pagamento */}
-        <div onClick={() => proximoPagamento && setIsModalAberto(true)} className="cursor-pointer block hover:shadow-lg transition-shadow rounded-lg">
-          <Card className="dashboard-finance-card metric-card h-full border-emerald-400/35 bg-emerald-500/[0.035]">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Próxima Invoice</CardTitle>
-              <span className="metric-icon bg-emerald-500/12 text-emerald-500"><DollarSign className="h-4 w-4" /></span>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-green-500">
-                {proximoPagamento ? proximoPagamento.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00'}
-              </div>
-              <p className="text-xs text-muted-foreground flex items-center gap-1">
-                {proximoPagamento 
-                  ? <>Previsto para {formatarData(proximoPagamento.data)} ({proximoPagamento.quantidade} {proximoPagamento.quantidade === 1 ? 'invoice' : 'invoices'} · {proximoPagamento.quantidadeOS} OS) <Info className="w-3 h-3" /></>
-                  : 'Nenhuma invoice aguardando pagamento.'}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        <article className="invoice-detail-panel">
+          {invoiceSelecionada ? <>
+            <div className="invoice-detail-header"><div><p className="surface-label">Detalhes da invoice</p><h3>{invoiceSelecionada.plataforma}</h3><p>Vencimento previsto para {formatarData(invoiceSelecionada.data)}</p></div><span className={`invoice-status ${invoiceSelecionada.status === 'Pagamento Atrasado' ? 'is-overdue' : 'is-open'}`}>{invoiceSelecionada.status === 'Pagamento Atrasado' ? 'Pagamento atrasado' : 'Aguardando pagamento'}</span></div>
+            <div className="invoice-detail-value"><span>Total a receber</span><strong>{invoiceSelecionada.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong><small>{invoiceSelecionada.quantidadeOS} {invoiceSelecionada.quantidadeOS === 1 ? 'ordem de serviço incluída' : 'ordens de serviço incluídas'}</small></div>
+            <div className="invoice-detail-os"><div className="invoice-detail-os-title"><span>OS da invoice</span><span>{invoiceSelecionada.quantidadeOS} itens</span></div>{invoiceSelecionada.atendimentos.map((atendimento) => <div className="invoice-os-line" key={atendimento.id}><span><b>{atendimento.numero_os || 'OS sem número'}</b><small>{atendimento.nome_cliente || 'Cliente não informado'}</small></span><strong>{calcularValorLiquido(atendimento).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></div>)}</div>
+            <div className="invoice-detail-footer"><div><span>Recebimento coletivo</span><small>A confirmação atualiza todas as OS desta invoice.</small></div><Button type="button" onClick={() => invoiceSelecionada.status === 'Pagamento Atrasado' ? confirmarPagamentoAtrasado(invoiceSelecionada) : registrarPagamentoDaInvoice(invoiceSelecionada)} disabled={osAtualizandoId === invoiceSelecionada.id} className="invoice-pay-action"><CheckCircle2 className="h-4 w-4" />{osAtualizandoId === invoiceSelecionada.id ? 'Registrando...' : invoiceSelecionada.status === 'Pagamento Atrasado' ? 'Confirmar pagamento' : 'Registrar pagamento'}</Button></div>
+          </> : <div className="invoice-empty-state invoice-detail-empty"><DollarSign className="h-8 w-8" /><b>Selecione uma invoice</b><span>Os detalhes e a ação de pagamento serão exibidos aqui.</span></div>}
+        </article>
+      </section>
 
-        <Link to="/extrato" className="block hover:shadow-lg transition-shadow rounded-lg">
-          <Card className="dashboard-finance-card metric-card h-full border-sky-400/30 bg-sky-500/[0.03]">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total de Atendimentos</CardTitle>
-              <span className="metric-icon bg-sky-500/12 text-sky-500"><Calendar className="h-4 w-4" /></span>
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{estatisticas.totalAtendimentos}</div>
-              <p className="text-xs text-muted-foreground">no mês</p>
-            </CardContent>
-          </Card>
-        </Link>
-      </div>
-
-      <div className="dashboard-metric-grid grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3">
-        <Card className="dashboard-finance-card metric-card border-violet-400/30 bg-violet-500/[0.03]">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Faturamento Bruto</CardTitle>
-            <span className="metric-icon bg-violet-500/12 text-violet-500"><TrendingUp className="h-4 w-4" /></span>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {estatisticas.totalBruto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-            </div>
-            <p className="text-xs text-muted-foreground">OS executadas no mês</p>
-          </CardContent>
-        </Card>
-
-        <Card className="dashboard-finance-card metric-card border-indigo-400/30 bg-indigo-500/[0.03]">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Faturamento Líquido</CardTitle>
-            <span className="metric-icon bg-indigo-500/12 text-indigo-500"><DollarSign className="h-4 w-4" /></span>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {estatisticas.totalLiquido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-            </div>
-            <p className="text-xs text-muted-foreground">OS executadas no mês</p>
-          </CardContent>
-        </Card>
-
-        <Card className="dashboard-finance-card metric-card border-amber-400/30 bg-amber-500/[0.03]">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Horas Trabalhadas</CardTitle>
-            <span className="metric-icon bg-amber-500/12 text-amber-500"><Clock className="h-4 w-4" /></span>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{estatisticas.totalHoras.toFixed(1)}h</div>
-            <p className="text-xs text-muted-foreground">OS executadas no mês</p>
-          </CardContent>
-        </Card>
-      </div>
+      <section className="invoice-performance-grid">
+        <article className="invoice-performance-card"><span>Faturamento líquido</span><strong>{estatisticas.totalLiquido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong><small>Valor bruto menos os adiantamentos recebidos.</small></article>
+        <article className="invoice-performance-card"><span>Horas trabalhadas</span><strong>{estatisticas.totalHoras.toFixed(1)}h</strong><small>Somente OS já executadas no mês.</small></article>
+        <article className="invoice-performance-card"><span>OS executadas</span><strong>{estatisticas.totalAtendimentos}</strong><small>Atendimentos considerados nos indicadores.</small></article>
+      </section>
 
       {/* Modal de Detalhes do Próximo Pagamento */}
       <Dialog open={isModalAberto} onOpenChange={setIsModalAberto}>
