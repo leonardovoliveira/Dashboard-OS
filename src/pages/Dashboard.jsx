@@ -130,6 +130,7 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
   const [osAtualizandoId, setOsAtualizandoId] = useState(null)
   const [erroAtualizacaoStatus, setErroAtualizacaoStatus] = useState('')
   const [invoiceSelecionadaId, setInvoiceSelecionadaId] = useState('')
+  const [isModalFaturamentoAberto, setIsModalFaturamentoAberto] = useState(false)
 
   const calcularHoras = (checkin, checkout) => {
     if (!checkin || !checkout) return 0
@@ -183,16 +184,6 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
       }))
       .sort((a, b) => (a.data || '9999-12-31').localeCompare(b.data || '9999-12-31'))
   }
-
-  const diasComAtendimentos = useMemo(() => {
-    const dias = new Set()
-    atendimentos.forEach(atendimento => {
-      if (atendimento.data_atendimento) {
-        dias.add(atendimento.data_atendimento)
-      }
-    })
-    return dias
-  }, [atendimentos])
 
   const dadosMensais = useMemo(() => {
     const anoExibicao = dataExibicao.getFullYear()
@@ -391,7 +382,8 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
       totalBruto,
       totalAdiantamentos,
       totalLiquido,
-      totalHoras
+      totalHoras,
+      atendimentosExecutadosMes
     }
   }, [atendimentos, dataExibicao])
 
@@ -435,56 +427,46 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
     const ultimoDia = new Date(anoAtual, mesAtual + 1, 0).getDate()
     const dias = []
     const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+    const totalAtendimentosNoMes = atendimentos.filter((atendimento) => atendimento.data_atendimento?.startsWith(`${anoAtual}-${String(mesAtual + 1).padStart(2, '0')}`)).length
+
     for (let i = 0; i < primeiroDia; i++) {
-      dias.push(<div key={`empty-${i}`} className="h-10"></div>)
+      dias.push(<div key={`empty-${i}`} className="invoice-calendar-empty" />)
     }
+
     for (let dia = 1; dia <= ultimoDia; dia++) {
       const dataStr = `${anoAtual}-${String(mesAtual + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`
-      const temAtendimento = diasComAtendimentos.has(dataStr)
+      const quantidadeNoDia = atendimentos.filter((atendimento) => atendimento.data_atendimento === dataStr).length
+      const temAtendimento = quantidadeNoDia > 0
       const ehHoje = dia === new Date().getDate() && mesAtual === new Date().getMonth() && anoAtual === new Date().getFullYear()
+
       dias.push(
-        <div
+        <button
+          type="button"
           key={dia}
           onClick={() => handleDiaClick(dataStr)}
-          className={`flex h-9 items-center justify-center rounded-md text-sm font-medium transition-all cursor-pointer sm:h-10 sm:rounded-lg ${
-            ehHoje
-              ? 'bg-primary text-primary-foreground'
-              : temAtendimento
-              ? 'border-2 border-green-500 hover:bg-green-500/10'
-              : 'text-foreground hover:bg-accent'
-          }`}
+          disabled={!temAtendimento}
+          className={`invoice-calendar-day ${ehHoje ? 'is-today' : ''} ${temAtendimento ? 'has-attendance' : ''}`}
+          aria-label={temAtendimento ? `${dia} de ${new Date(anoAtual, mesAtual).toLocaleString('pt-BR', { month: 'long' })}: ${quantidadeNoDia} ${quantidadeNoDia === 1 ? 'atendimento' : 'atendimentos'}` : `${dia} de ${new Date(anoAtual, mesAtual).toLocaleString('pt-BR', { month: 'long' })}: sem atendimentos`}
         >
-          {dia}
-        </div>
+          <span>{dia}</span>
+          {temAtendimento && <b>{quantidadeNoDia}</b>}
+        </button>
       )
     }
+
     return (
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <button onClick={() => mudarMes(-1)} className="p-2 rounded-md hover:bg-accent"><ChevronLeft className="w-4 h-4" /></button>
-          <h3 className="text-base font-semibold capitalize sm:text-lg">{new Date(anoAtual, mesAtual).toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</h3>
-          <button onClick={() => mudarMes(1)} className="p-2 rounded-md hover:bg-accent"><ChevronRight className="w-4 h-4" /></button>
+      <div className="invoice-calendar">
+        <div className="invoice-calendar-toolbar">
+          <button type="button" onClick={() => mudarMes(-1)} className="invoice-calendar-nav" aria-label="Mês anterior"><ChevronLeft className="h-4 w-4" /></button>
+          <div><p className="surface-label">Agenda operacional</p><h3>{new Date(anoAtual, mesAtual).toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</h3></div>
+          <button type="button" onClick={() => mudarMes(1)} className="invoice-calendar-nav" aria-label="Próximo mês"><ChevronRight className="h-4 w-4" /></button>
         </div>
-        <div className="mb-2 grid grid-cols-7 gap-1 sm:gap-2">
-          {diasSemana.map(dia => (
-            <div key={dia} className="text-center text-[10px] font-semibold text-muted-foreground sm:text-xs">
-              {dia}
-            </div>
-          ))}
+        <div className="invoice-calendar-meta"><span><b>{totalAtendimentosNoMes}</b> atendimentos no mês</span><span className="invoice-calendar-live"><i />Dias com registro são interativos</span></div>
+        <div className="invoice-calendar-weekdays">
+          {diasSemana.map(dia => <div key={dia}>{dia}</div>)}
         </div>
-        <div className="grid grid-cols-7 gap-1 sm:gap-2">
-          {dias}
-        </div>
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs">
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 bg-primary rounded"></div>
-            <span className="text-muted-foreground">Hoje</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-4 border-2 border-green-500 rounded"></div>
-            <span className="text-muted-foreground">Com atendimento</span>
-          </div>
-        </div>
+        <div className="invoice-calendar-grid">{dias}</div>
+        <div className="invoice-calendar-legend"><span><i className="is-today" />Hoje</span><span><i className="has-attendance" />Com atendimentos</span></div>
       </div>
     )
   }
@@ -516,12 +498,12 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
           <strong>{proximoPagamento ? proximoPagamento.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : 'R$ 0,00'}</strong>
           <small>{proximoPagamento ? `${formatarData(proximoPagamento.data)} · ${proximoPagamento.quantidadeOS} OS` : 'Sem previsão de pagamento'}</small>
         </button>
-        <article className="invoice-insight-card invoice-insight-card-neutral">
+        <button type="button" onClick={() => setIsModalFaturamentoAberto(true)} className="invoice-insight-card invoice-insight-card-neutral">
           <span className="invoice-insight-icon"><TrendingUp className="h-4 w-4" /></span>
           <span className="invoice-insight-label">Faturamento do mês</span>
           <strong>{estatisticas.totalBruto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>
-          <small>{estatisticas.totalAtendimentos} atendimentos realizados</small>
-        </article>
+          <small>{estatisticas.atendimentosExecutadosMes.length} OS executadas · ver composição</small>
+        </button>
         <Link to="/extrato" className="invoice-insight-card invoice-insight-card-action">
           <span className="invoice-insight-icon"><Calendar className="h-4 w-4" /></span>
           <span className="invoice-insight-label">Atendimentos</span>
@@ -614,6 +596,30 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
               {proximoPagamento?.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
             </span>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isModalFaturamentoAberto} onOpenChange={setIsModalFaturamentoAberto}>
+        <DialogContent className="max-h-[88vh] w-[calc(100%-2rem)] max-w-xl overflow-y-auto p-4 sm:p-6">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><TrendingUp className="h-5 w-5 text-violet-400" />Faturamento do mês</DialogTitle>
+            <DialogDescription>Composição financeira das OS executadas em {new Date(dataExibicao).toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}.</DialogDescription>
+          </DialogHeader>
+          <div className="faturamento-modal-summary">
+            <div><span>Faturamento bruto</span><strong>{estatisticas.totalBruto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></div>
+            <div><span>Adiantamentos</span><strong>{estatisticas.totalAdiantamentos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></div>
+            <div><span>Saldo líquido</span><strong>{estatisticas.totalLiquido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong></div>
+          </div>
+          <div className="space-y-3 py-2">
+            <div className="flex items-center justify-between"><p className="text-sm font-bold">OS que compõem o faturamento</p><span className="text-xs text-muted-foreground">{estatisticas.atendimentosExecutadosMes.length} {estatisticas.atendimentosExecutadosMes.length === 1 ? 'item' : 'itens'}</span></div>
+            {estatisticas.atendimentosExecutadosMes.length > 0 ? estatisticas.atendimentosExecutadosMes.map((atendimento) => (
+              <div key={atendimento.id} className="faturamento-modal-os">
+                <div><p>OS {atendimento.numero_os || 'sem número'}</p><span>{atendimento.nome_cliente || 'Cliente não informado'} · {atendimento.plataforma || 'Plataforma não informada'} · {formatarData(atendimento.data_atendimento)}</span></div>
+                <div><strong>{calcularValorBruto(atendimento).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong>{(parseFloat(atendimento.adiantamento_recebido) || 0) > 0 && <small>Adiantamento: {(parseFloat(atendimento.adiantamento_recebido) || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</small>}</div>
+              </div>
+            )) : <div className="faturamento-modal-empty">Não há OS executadas neste mês.</div>}
+          </div>
+          <div className="flex items-center justify-between border-t pt-4"><span className="text-sm font-bold">Total do período</span><span className="text-xl font-black text-violet-400">{estatisticas.totalBruto.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span></div>
         </DialogContent>
       </Dialog>
 
@@ -798,7 +804,7 @@ function Dashboard({ atendimentos, onAtualizarAtendimentos }) {
       </Dialog>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <Card className="dashboard-analytics-card overflow-hidden">
+        <Card className="dashboard-analytics-card invoice-calendar-card overflow-hidden">
           <CardHeader>
             <CardTitle>Calendário de Atendimentos</CardTitle>
           </CardHeader>

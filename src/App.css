@@ -1150,6 +1150,353 @@ button.invoice-insight-card {
   }
 }
 
+.faturamento-modal-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.65rem;
+  margin: 0.35rem 0 0.55rem;
+}
+
+.faturamento-modal-summary > div {
+  min-width: 0;
+  border: 1px solid rgba(162, 145, 255, 0.2);
+  border-radius: 0.9rem;
+  background: linear-gradient(145deg, rgba(126, 105, 255, 0.13), rgba(24, 29, 55, 0.5));
+  padding: 0.8rem;
+}
+
+.faturamento-modal-summary span,
+.faturamento-modal-summary strong {
+  display: block;
+}
+
+.faturamento-modal-summary span {
+  color: #aeb6d6;
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.faturamento-modal-summary strong {
+  margin-top: 0.35rem;
+  overflow: hidden;
+  color: #f2f1ff;
+  font-size: clamp(0.92rem, 2.4vw, 1.16rem);
+  font-weight: 850;
+  letter-spacing: -0.04em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.faturamento-modal-summary > div:nth-child(2) strong {
+  color: #ffca72;
+}
+
+.faturamento-modal-summary > div:nth-child(3) strong {
+  color: #b7a8ff;
+}
+
+.faturamento-modal-os {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid rgba(166, 180, 236, 0.14);
+  border-radius: 0.95rem;
+  background: rgba(20, 27, 50, 0.58);
+  padding: 0.82rem;
+}
+
+.faturamento-modal-os p,
+.faturamento-modal-os span,
+.faturamento-modal-os strong,
+.faturamento-modal-os small {
+  display: block;
+}
+
+.faturamento-modal-os p {
+  color: #f1f3ff;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.faturamento-modal-os span {
+  margin-top: 0.2rem;
+  color: #9ba6c9;
+  font-size: 0.67rem;
+}
+
+.faturamento-modal-os > div:last-child {
+  flex: none;
+  text-align: right;
+}
+
+.faturamento-modal-os strong {
+  color: #d7d1ff;
+  font-size: 0.8rem;
+  font-weight: 850;
+}
+
+.faturamento-modal-os small {
+  margin-top: 0.2rem;
+  color: #f0b35e;
+  font-size: 0.62rem;
+}
+
+.faturamento-modal-empty {
+  border: 1px dashed rgba(166, 180, 236, 0.22);
+  border-radius: 0.9rem;
+  color: #98a3c5;
+  padding: 1.5rem;
+  text-align: center;
+  font-size: 0.78rem;
+}
+
+.invoice-calendar-card {
+  border-color: rgba(143, 126, 255, 0.28) !important;
+  background: radial-gradient(circle at 90% 4%, rgba(127, 108, 255, 0.22), transparent 15rem), linear-gradient(145deg, rgba(29, 35, 67, 0.99), rgba(13, 17, 34, 0.99)) !important;
+}
+
+.invoice-calendar-card [data-slot="card-header"] {
+  position: relative;
+  border-bottom: 1px solid rgba(181, 192, 255, 0.11);
+  padding-bottom: 1rem;
+}
+
+.invoice-calendar-card [data-slot="card-header"]::after {
+  position: absolute;
+  bottom: -1px;
+  left: 1.5rem;
+  width: 3.8rem;
+  height: 2px;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #ad9aff, #645df2);
+  content: "";
+}
+
+.invoice-calendar {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.invoice-calendar-toolbar {
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr) 2.25rem;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.invoice-calendar-toolbar > div {
+  text-align: center;
+}
+
+.invoice-calendar-toolbar h3 {
+  margin-top: 0.15rem;
+  color: #f2f3ff;
+  font-size: 1rem;
+  font-weight: 850;
+  letter-spacing: -0.035em;
+  text-transform: capitalize;
+}
+
+.invoice-calendar-toolbar .surface-label {
+  color: #8e98bd;
+  font-size: 0.58rem;
+}
+
+.invoice-calendar-nav {
+  display: inline-flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(174, 187, 249, 0.16);
+  border-radius: 0.72rem;
+  background: rgba(255, 255, 255, 0.04);
+  color: #c2baff;
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), background 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.invoice-calendar-nav:hover {
+  background: rgba(143, 125, 255, 0.18);
+}
+
+.invoice-calendar-nav:active {
+  transform: scale(0.94);
+}
+
+.invoice-calendar-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  border: 1px solid rgba(174, 187, 249, 0.12);
+  border-radius: 0.75rem;
+  background: rgba(9, 12, 27, 0.3);
+  color: #9da8ca;
+  padding: 0.52rem 0.68rem;
+  font-size: 0.65rem;
+}
+
+.invoice-calendar-meta b {
+  color: #ffffff;
+  font-weight: 850;
+}
+
+.invoice-calendar-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  white-space: nowrap;
+}
+
+.invoice-calendar-live i {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 9999px;
+  background: #61d9bc;
+  box-shadow: 0 0 0 3px rgba(97, 217, 188, 0.12);
+}
+
+.invoice-calendar-weekdays,
+.invoice-calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.32rem;
+}
+
+.invoice-calendar-weekdays > div {
+  color: #7f89af;
+  font-size: 0.61rem;
+  font-weight: 750;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.invoice-calendar-empty {
+  min-height: 2.55rem;
+}
+
+.invoice-calendar-day {
+  position: relative;
+  display: flex;
+  min-height: 2.55rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 0.72rem;
+  background: rgba(255, 255, 255, 0.025);
+  color: #aab4d2;
+  font-size: 0.74rem;
+  font-weight: 750;
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), background 160ms cubic-bezier(0.23, 1, 0.32, 1), border-color 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.invoice-calendar-day:disabled {
+  cursor: default;
+}
+
+.invoice-calendar-day.has-attendance {
+  cursor: pointer;
+  border-color: rgba(123, 210, 184, 0.46);
+  background: linear-gradient(145deg, rgba(49, 151, 132, 0.18), rgba(25, 51, 63, 0.22));
+  color: #dcfff6;
+}
+
+.invoice-calendar-day.has-attendance:hover {
+  transform: translateY(-2px);
+  border-color: rgba(132, 238, 207, 0.76);
+  background: linear-gradient(145deg, rgba(75, 186, 157, 0.3), rgba(31, 78, 87, 0.42));
+}
+
+.invoice-calendar-day.has-attendance:active {
+  transform: scale(0.95);
+}
+
+.invoice-calendar-day.is-today {
+  border-color: rgba(182, 164, 255, 0.85);
+  background: linear-gradient(135deg, #7d69e9, #5749c8);
+  color: #ffffff;
+  box-shadow: 0 8px 20px rgba(100, 78, 215, 0.32);
+}
+
+.invoice-calendar-day b {
+  position: absolute;
+  top: 0.22rem;
+  right: 0.25rem;
+  display: inline-flex;
+  min-width: 0.85rem;
+  height: 0.85rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  background: #64debd;
+  color: #092a2d;
+  font-size: 0.54rem;
+  font-weight: 900;
+}
+
+.invoice-calendar-day.is-today b {
+  background: #ffffff;
+  color: #5c49c9;
+}
+
+.invoice-calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1rem;
+  border-top: 1px solid rgba(181, 192, 255, 0.1);
+  color: #9ca7c7;
+  padding-top: 0.75rem;
+  font-size: 0.66rem;
+}
+
+.invoice-calendar-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.invoice-calendar-legend i {
+  width: 0.64rem;
+  height: 0.64rem;
+  border-radius: 0.25rem;
+}
+
+.invoice-calendar-legend i.is-today {
+  background: #715fe2;
+}
+
+.invoice-calendar-legend i.has-attendance {
+  border: 1px solid #77d9be;
+  background: rgba(75, 186, 157, 0.22);
+}
+
+@media (max-width: 640px) {
+  .faturamento-modal-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .invoice-calendar-meta {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .invoice-calendar-live {
+    white-space: normal;
+  }
+
+  .invoice-calendar-weekdays,
+  .invoice-calendar-grid {
+    gap: 0.2rem;
+  }
+
+  .invoice-calendar-day,
+  .invoice-calendar-empty {
+    min-height: 2.35rem;
+  }
+}
+
 .relatorio-financeiro-print {
   display: none;
 }
