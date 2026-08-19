@@ -82,7 +82,7 @@ const AtendimentoRow = ({
   return (
     <tr 
       key={atendimento.id} 
-      className={`cursor-pointer transition-colors hover:bg-accent/50 ${isSelected ? 'bg-accent/50' : ''} ${vencimentoProximo ? 'bg-amber-500/[0.045]' : ''}`}
+      className={`operations-table-row cursor-pointer transition-colors ${isSelected ? 'is-selected' : ''} ${vencimentoProximo ? 'is-due-soon' : ''}`}
       onClick={() => onViewDetails(atendimento)}
     >
       <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
@@ -161,7 +161,7 @@ const AtendimentoCardMobile = ({ atendimento, handleExcluir, isSelected, toggleS
   return (
     <article
       onClick={() => onViewDetails(atendimento)}
-      className={`cursor-pointer rounded-lg border p-4 transition-colors hover:bg-accent/50 ${isSelected ? 'border-primary bg-primary/5' : vencimentoProximo ? 'border-amber-400/50 bg-amber-500/[0.045]' : 'border-border bg-card'}`}
+      className={`operations-mobile-card cursor-pointer rounded-2xl border p-4 transition-colors ${isSelected ? 'is-selected' : vencimentoProximo ? 'is-due-soon' : ''}`}
     >
       <div className="flex items-start gap-3">
         <div className="pt-0.5" onClick={(e) => e.stopPropagation()}>
@@ -337,22 +337,28 @@ function Extrato({ atendimentos: propAtendimentos = [], setAtendimentos: setProp
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="operations-page space-y-6">
+      <header className="operations-page-header flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="surface-label">Operacional</p>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground sm:text-3xl">Atendimentos</h1>
           <p className="mt-1 text-sm text-muted-foreground">Consulte, edite e acompanhe o ciclo financeiro de cada ordem de serviço.</p>
         </div>
-        <div className="grid grid-cols-2 gap-2 sm:flex">
-          <Button onClick={handleExportar} variant="outline" size="sm" className="h-9 w-full rounded-lg border-border bg-card/70 sm:w-auto"><Download className="mr-2 h-4 w-4" />Exportar</Button>
+        <div className="operations-hero-actions grid grid-cols-2 gap-2 sm:flex">
+          <Button onClick={handleExportar} variant="outline" size="sm" className="operations-action-button h-10 w-full sm:w-auto"><Download className="mr-2 h-4 w-4" />Exportar</Button>
           <input type="file" ref={fileInputRef} onChange={handleImportar} accept=".json" style={{ display: 'none' }} />
-          <Button onClick={() => fileInputRef.current.click()} variant="outline" size="sm" className="h-9 w-full rounded-lg border-border bg-card/70 sm:w-auto"><Upload className="mr-2 h-4 w-4" />Importar</Button>
+          <Button onClick={() => fileInputRef.current.click()} variant="outline" size="sm" className="operations-action-button h-10 w-full sm:w-auto"><Upload className="mr-2 h-4 w-4" />Importar</Button>
         </div>
-      </div>
+      </header>
+
+      <section className="operations-summary-grid" aria-label="Resumo do extrato filtrado">
+        <article><span>Resultados</span><strong>{atendimentosFiltrados.length}</strong><small>{filtroBusca ? 'Busca global ativa' : 'No período selecionado'}</small></article>
+        <article><span>Faturamento bruto</span><strong>{totalBrutoFiltrado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</strong><small>OS exibidas no extrato</small></article>
+        <article><span>Seleção em lote</span><strong>{selectedIds.length}</strong><small>{selectedIds.length ? 'Itens prontos para edição' : 'Nenhuma OS selecionada'}</small></article>
+      </section>
 
       {selectedIds.length > 0 && (
-        <Card className="sticky top-20 z-10 rounded-2xl border-primary/25 bg-primary/8 shadow-xl shadow-indigo-950/10">
+        <Card className="operations-bulk-panel sticky top-20 z-10 rounded-2xl">
           <CardContent className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
               <span className="text-sm font-medium text-primary">{selectedIds.length} itens selecionados</span>
@@ -382,10 +388,10 @@ function Extrato({ atendimentos: propAtendimentos = [], setAtendimentos: setProp
         </Card>
       )}
 
-      <Card className="filters-surface rounded-2xl">
+      <Card className="operations-filter-panel filters-surface rounded-2xl">
         <CardContent className="grid grid-cols-1 gap-4 pt-6 sm:grid-cols-2 xl:grid-cols-7">
           <div className="space-y-2 sm:col-span-2 xl:col-span-2">
-            <Label className="surface-label">Buscar chamado</Label>
+            <Label className="surface-label">Busca global de chamados</Label>
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
@@ -438,8 +444,9 @@ function Extrato({ atendimentos: propAtendimentos = [], setAtendimentos: setProp
             </Select>
           </div>
           <div className="flex flex-col justify-end space-y-2 sm:col-span-2 xl:col-span-1">
-            <Label className="surface-label">Total bruto</Label>
-            <span className="text-2xl font-bold text-blue-500">
+                          <Label className="surface-label">Total bruto filtrado</Label>
+              <span className="text-2xl font-bold text-violet-400">
+
               {totalBrutoFiltrado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
             </span>
           </div>
@@ -462,7 +469,7 @@ function Extrato({ atendimentos: propAtendimentos = [], setAtendimentos: setProp
             />
           ))
         ) : (
-          <Card>
+          <Card className="operations-empty-state">
             <CardContent className="py-8 text-center text-sm text-muted-foreground">
               Nenhum atendimento encontrado para os filtros selecionados.
             </CardContent>
@@ -470,10 +477,11 @@ function Extrato({ atendimentos: propAtendimentos = [], setAtendimentos: setProp
         )}
       </div>
 
-      <div className="hidden overflow-x-auto rounded-2xl border border-border bg-card/70 shadow-sm md:block">
+      <section className="operations-table-panel hidden overflow-x-auto rounded-2xl md:block">
+        <div className="operations-table-panel-header"><div><p className="surface-label">Lista operacional</p><h2>Atendimentos encontrados</h2></div><span>{atendimentosFiltrados.length} {atendimentosFiltrados.length === 1 ? 'OS' : 'OS'}</span></div>
         <table className="w-full border-collapse">
           <thead>
-            <tr className="border-b bg-muted/70">
+            <tr className="operations-table-head">
               <th className="px-3 py-3 text-left w-10">
                 <Checkbox checked={atendimentosFiltrados.length > 0 && selectedIds.length === atendimentosFiltrados.length} onCheckedChange={toggleSelectAll} />
               </th>
@@ -510,7 +518,7 @@ function Extrato({ atendimentos: propAtendimentos = [], setAtendimentos: setProp
             )}
           </tbody>
         </table>
-      </div>
+      </section>
 
       {/* Modal de Detalhes e Edição */}
       <Dialog open={!!atendimentoDetalhe} onOpenChange={(open) => !open && setAtendimentoDetalhe(null)}>
