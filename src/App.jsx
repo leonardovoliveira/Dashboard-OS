@@ -122,8 +122,9 @@ function Navigation({ toggleDarkMode, darkMode, onNovoChamado, sidebarRecolhida,
       </aside>
 
       <header className={`app-header sticky top-0 z-30 border-b transition-[margin] duration-300 ${sidebarRecolhida ? 'lg:ml-[84px]' : 'lg:ml-[264px]'}`}>
-        <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6 lg:h-[76px] lg:px-8">
-          <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-16 items-center justify-between gap-3 px-4 sm:px-6 lg:h-[76px] lg:px-8">
+            <div className="flex min-w-0 items-center gap-3">
+
             <Button
               variant="outline"
               size="icon"
@@ -138,6 +139,15 @@ function Navigation({ toggleDarkMode, darkMode, onNovoChamado, sidebarRecolhida,
               <p className="truncate text-sm font-semibold text-foreground sm:text-base">LVO Consultoria em TI</p>
             </div>
           </div>
+
+          <nav className="app-command-nav hidden xl:flex" aria-label="Atalhos de navegação">
+            {itensNavegacao.map(({ path, label, icon }) => (
+              <Link key={path} to={path} className={`app-command-nav-link ${isActive(path) ? 'app-command-nav-link-active' : ''}`}>
+                {createElement(icon, { className: 'h-3.5 w-3.5' })}
+                <span>{label}</span>
+              </Link>
+            ))}
+          </nav>
 
           <div className="flex shrink-0 items-center gap-2">
             <button
@@ -354,7 +364,7 @@ function App() {
           </div>
         )}
         
-        <main className="mx-auto max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+        <main className="app-main-content mx-auto max-w-[1680px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
           {dadosCarregados ? (
             <AnimatedRoutes atendimentos={atendimentos} setAtendimentos={atualizarESalvar} />
           ) : (

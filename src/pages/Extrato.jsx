@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import { Plus, Edit2, Trash2, Save, X, Download, Upload, Calendar, Info, ExternalLink, AlertTriangle } from 'lucide-react'
+import { Plus, Edit2, Trash2, Save, X, Download, Upload, Calendar, Info, ExternalLink, AlertTriangle, Search } from 'lucide-react'
 
 // Função para calcular horas trabalhadas
 const calcularHoras = (checkin, checkout) => {
@@ -224,6 +224,7 @@ function Extrato({ atendimentos: propAtendimentos = [], setAtendimentos: setProp
   const [dataFim, setDataFim] = useState(lastDay);
   const [filtroPlataforma, setFiltroPlataforma] = useState('all');
   const [filtroStatus, setFiltroStatus] = useState('all');
+  const [filtroBusca, setFiltroBusca] = useState('');
   const [localAtendimentos, setLocalAtendimentos] = useState(propAtendimentos);
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkStatus, setBulkStatus] = useState('');
@@ -270,14 +271,19 @@ function Extrato({ atendimentos: propAtendimentos = [], setAtendimentos: setProp
   }
 
   const atendimentosFiltrados = useMemo(() => {
+    const termoBusca = filtroBusca.trim().toLocaleLowerCase('pt-BR')
+
     return localAtendimentos.filter(atendimento => {
       const dataAtendimentoStr = atendimento.data_atendimento;
-      const dataCorresponde = (!dataInicio || dataAtendimentoStr >= dataInicio) && (!dataFim || dataAtendimentoStr <= dataFim);
+      // A busca é global para localizar uma OS mesmo quando ela está fora do período atualmente selecionado.
+      const dataCorresponde = termoBusca || ((!dataInicio || dataAtendimentoStr >= dataInicio) && (!dataFim || dataAtendimentoStr <= dataFim));
       const plataformaCorresponde = filtroPlataforma === 'all' || atendimento.plataforma === filtroPlataforma;
       const statusCorresponde = filtroStatus === 'all' || atendimento.status === filtroStatus;
-      return dataCorresponde && plataformaCorresponde && statusCorresponde;
+      const buscaCorresponde = !termoBusca || [atendimento.numero_os, atendimento.nome_cliente, atendimento.plataforma]
+        .some((campo) => String(campo || '').toLocaleLowerCase('pt-BR').includes(termoBusca));
+      return dataCorresponde && plataformaCorresponde && statusCorresponde && buscaCorresponde;
     }).sort((a, b) => new Date(a.data_atendimento) - new Date(b.data_atendimento));
-  }, [localAtendimentos, dataInicio, dataFim, filtroPlataforma, filtroStatus]);
+  }, [localAtendimentos, dataInicio, dataFim, filtroPlataforma, filtroStatus, filtroBusca]);
 
   const totalBrutoFiltrado = atendimentosFiltrados.reduce((acc, atendimento) => acc + calcularValorBruto(atendimento), 0);
 
@@ -376,8 +382,27 @@ function Extrato({ atendimentos: propAtendimentos = [], setAtendimentos: setProp
         </Card>
       )}
 
-      <Card className="rounded-2xl">
-        <CardContent className="grid grid-cols-1 gap-4 pt-6 sm:grid-cols-2 lg:grid-cols-5">
+      <Card className="filters-surface rounded-2xl">
+        <CardContent className="grid grid-cols-1 gap-4 pt-6 sm:grid-cols-2 xl:grid-cols-7">
+          <div className="space-y-2 sm:col-span-2 xl:col-span-2">
+            <Label className="surface-label">Buscar chamado</Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                value={filtroBusca}
+                onChange={(e) => setFiltroBusca(e.target.value)}
+                placeholder="OS, cliente ou plataforma"
+                className="pl-10 pr-10"
+                aria-label="Buscar por número da OS, cliente ou plataforma"
+              />
+              {filtroBusca && (
+                <button type="button" onClick={() => setFiltroBusca('')} className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground" aria-label="Limpar busca">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <p className="text-[11px] text-muted-foreground">Busca em todos os atendimentos cadastrados.</p>
+          </div>
           <div className="space-y-2">
             <Label className="surface-label">Data início</Label>
             <div className="relative">
@@ -412,7 +437,7 @@ function Extrato({ atendimentos: propAtendimentos = [], setAtendimentos: setProp
               </SelectContent>
             </Select>
           </div>
-          <div className="flex flex-col justify-end space-y-2 sm:col-span-2 lg:col-span-1">
+          <div className="flex flex-col justify-end space-y-2 sm:col-span-2 xl:col-span-1">
             <Label className="surface-label">Total bruto</Label>
             <span className="text-2xl font-bold text-blue-500">
               {totalBrutoFiltrado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
