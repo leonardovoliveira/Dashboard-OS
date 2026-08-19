@@ -443,7 +443,7 @@ function App() {
               </div>
             </div>
 
-            <DialogFooter className="flex-col gap-2 sm:flex-row sm:gap-0">
+            <DialogFooter className="mt-2 flex-col gap-3 border-t border-white/10 pt-4 sm:flex-row sm:justify-end sm:gap-3">
               <Button variant="outline" className="w-full sm:w-auto" onClick={() => setIsModalNovoAberto(false)}>Cancelar</Button>
               <Button onClick={handleAdicionar} className="w-full bg-green-600 text-white hover:bg-green-700 sm:w-auto">Salvar Atendimento</Button>
             </DialogFooter>
