@@ -299,14 +299,14 @@
   }
 
   .dashboard-analytics-card {
-    height: 360px;
-    min-height: 360px;
+    height: 500px;
+    min-height: 500px;
   }
 
   @media (min-width: 640px) {
     .dashboard-analytics-card {
-      height: 420px;
-      min-height: 420px;
+      height: 520px;
+      min-height: 520px;
     }
   }
 }
@@ -1273,8 +1273,17 @@ button.invoice-insight-card {
   content: "";
 }
 
+.invoice-calendar-card [data-slot="card-content"] {
+  display: flex;
+  min-height: 0;
+  padding-top: 1rem;
+}
+
 .invoice-calendar {
   display: grid;
+  width: 100%;
+  flex: 1;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
   gap: 0.8rem;
 }
 
@@ -1362,6 +1371,11 @@ button.invoice-insight-card {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 0.32rem;
+}
+
+.invoice-calendar-grid {
+  grid-auto-rows: minmax(2.55rem, 1fr);
+  align-content: stretch;
 }
 
 .invoice-calendar-weekdays > div {
@@ -1491,9 +1505,150 @@ button.invoice-insight-card {
     gap: 0.2rem;
   }
 
+  .dashboard-analytics-card {
+    height: auto;
+    min-height: 500px;
+  }
+
   .invoice-calendar-day,
   .invoice-calendar-empty {
     min-height: 2.35rem;
+  }
+}
+
+.analytics-card {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border-color: rgba(144, 128, 255, 0.24) !important;
+  background: radial-gradient(circle at 94% 7%, rgba(123, 105, 255, 0.22), transparent 14rem), linear-gradient(145deg, rgba(27, 34, 64, 0.99), rgba(12, 16, 33, 0.99)) !important;
+}
+
+.analytics-card::after {
+  position: absolute;
+  right: -6rem;
+  bottom: -6rem;
+  width: 15rem;
+  height: 15rem;
+  border: 1px solid rgba(170, 157, 255, 0.12);
+  border-radius: 9999px;
+  content: "";
+  pointer-events: none;
+}
+
+.analytics-card-growth {
+  background: radial-gradient(circle at 93% 8%, rgba(77, 207, 181, 0.16), transparent 14rem), linear-gradient(145deg, rgba(24, 39, 65, 0.99), rgba(11, 18, 33, 0.99)) !important;
+}
+
+.analytics-card [data-slot="card-header"] {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(181, 192, 255, 0.11);
+  padding-bottom: 1rem;
+}
+
+.analytics-card [data-slot="card-title"] {
+  margin-top: 0.15rem;
+  color: #f0f1ff;
+  font-size: 1rem;
+  font-weight: 850;
+  letter-spacing: -0.035em;
+}
+
+.analytics-card-eyebrow {
+  color: #929cc1;
+  font-size: 0.61rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.analytics-card-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.65rem;
+  flex: none;
+  border: 1px solid rgba(174, 157, 255, 0.22);
+  border-radius: 9999px;
+  background: rgba(139, 121, 255, 0.11);
+  color: #c4baff;
+  padding: 0.18rem 0.55rem;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: capitalize;
+}
+
+.analytics-card-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.analytics-card-description {
+  margin-bottom: 0.8rem;
+  color: #98a3c5;
+  font-size: 0.72rem;
+}
+
+.analytics-chart-wrap {
+  min-height: 0;
+  flex: 1;
+}
+
+.analytics-chart-wrap-with-description {
+  min-height: 0;
+}
+
+.analytics-card .recharts-cartesian-grid line {
+  stroke: rgba(176, 188, 245, 0.13);
+}
+
+.analytics-card .recharts-text,
+.analytics-card .recharts-legend-item-text {
+  fill: #9ba7cb !important;
+  color: #9ba7cb !important;
+}
+
+.analytics-card .recharts-tooltip-wrapper .recharts-default-tooltip {
+  border-color: rgba(169, 155, 255, 0.28) !important;
+  background: #141a35 !important;
+  box-shadow: 0 16px 30px rgba(0, 0, 0, 0.3) !important;
+}
+
+.analytics-card .recharts-tooltip-label,
+.analytics-card .recharts-tooltip-item {
+  color: #eff1ff !important;
+}
+
+.analytics-card .recharts-bar-rectangle path {
+  transition: opacity 150ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.analytics-card .recharts-bar-rectangle:hover path {
+  opacity: 0.78;
+}
+
+@media (max-width: 640px) {
+  .analytics-card [data-slot="card-header"] {
+    gap: 0.7rem;
+  }
+
+  .analytics-card [data-slot="card-title"] {
+    font-size: 0.94rem;
+  }
+
+  .analytics-card-description {
+    font-size: 0.68rem;
   }
 }
 
