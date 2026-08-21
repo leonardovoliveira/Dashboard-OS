@@ -160,6 +160,26 @@
     box-shadow: inset 3px 0 0 #9a8bff, 0 8px 20px rgba(85, 101, 239, 0.1);
   }
 
+  .app-platform-link {
+    border: 1px solid transparent;
+    color: #aab5d6;
+    text-decoration: none;
+  }
+
+  .app-platform-link:hover {
+    border-color: rgba(151, 136, 255, 0.3);
+    background: linear-gradient(90deg, rgba(110, 93, 220, 0.16), rgba(255, 255, 255, 0.025));
+    color: #f7f8ff;
+  }
+
+  .app-platform-link:hover svg {
+    color: #c5baff;
+  }
+
+  .app-platform-link:active {
+    transform: scale(0.97);
+  }
+
   .app-command-nav {
     align-items: center;
     gap: 0.25rem;

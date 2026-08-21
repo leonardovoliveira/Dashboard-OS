@@ -63,25 +63,35 @@ function Navigation({ toggleDarkMode, darkMode, onNovoChamado, sidebarRecolhida,
     { path: '/relatorios', label: 'Relatórios', icon: BarChart3 }
   ]
 
+  const plataformasExternas = [
+    { label: 'FindUP', sigla: 'F', href: 'https://tech.findup.com.br/invoices', cor: 'from-sky-500/90 to-blue-600/90' },
+    { label: 'EuNerd', sigla: 'E', href: 'https://operator.encontreumnerd.com.br/nerd/dashboard', cor: 'from-emerald-500/90 to-teal-600/90' },
+    { label: 'NetSupport', sigla: 'N', href: 'https://nssupport.netsupport.com.br/supporter/dashboard', cor: 'from-amber-500/90 to-orange-600/90' },
+    { label: 'Quallit', sigla: 'Q', href: 'https://nfe.quallit.com.br/', cor: 'from-violet-500/90 to-indigo-600/90' }
+  ]
+
   const isActive = (path) => location.pathname === path
 
-  const LinksNavegacao = ({ onNavigate = () => {}, compacta = false }) => (
+  const LinksPlataformas = ({ onNavigate = () => {}, compacta = false }) => (
     <>
-      <p className={`mb-2 px-3 text-[10px] font-bold tracking-[0.16em] text-[#69769f] ${compacta ? 'sr-only' : ''}`}>OPERACIONAL</p>
-      {itensNavegacao.map(({ path, label, icon }) => (
-        <Link
-          key={path}
-          to={path}
+      <p className={`mb-2 px-3 text-[10px] font-bold tracking-[0.16em] text-[#69769f] ${compacta ? 'sr-only' : ''}`}>PLATAFORMAS</p>
+      {plataformasExternas.map(({ label, sigla, href, cor }) => (
+        <a
+          key={label}
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
           onClick={onNavigate}
-          title={compacta ? label : undefined}
-          aria-label={label}
-          className={`app-nav-link mb-2 flex h-11 min-h-11 items-center rounded-lg text-sm font-medium transition-all ${
+          title={compacta ? `Abrir ${label}` : undefined}
+          aria-label={`Abrir ${label} em nova aba`}
+          className={`app-platform-link mb-2 flex h-11 min-h-11 items-center rounded-lg text-sm font-medium transition-all ${
             compacta ? 'mx-auto w-11 justify-center p-0' : 'gap-3 px-3'
-          } ${isActive(path) ? 'app-nav-link-active' : ''}`}
+          }`}
         >
-          {createElement(icon, { className: 'h-4 w-4 shrink-0' })}
-          <span className={compacta ? 'sr-only' : ''}>{label}</span>
-        </Link>
+          <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-gradient-to-br ${cor} text-[11px] font-black text-white shadow-sm`}>{sigla}</span>
+          <span className={compacta ? 'sr-only' : 'min-w-0 flex-1 truncate'}>{label}</span>
+          {!compacta && <ExternalLink className="h-3.5 w-3.5 shrink-0 text-[#7685ad]" />}
+        </a>
       ))}
     </>
   )
@@ -103,7 +113,7 @@ function Navigation({ toggleDarkMode, darkMode, onNovoChamado, sidebarRecolhida,
         </div>
 
         <nav className={`flex-1 ${sidebarRecolhida ? 'px-3 py-5' : 'px-3 py-6'}`}>
-          <LinksNavegacao compacta={sidebarRecolhida} />
+          <LinksPlataformas compacta={sidebarRecolhida} />
         </nav>
 
         <div className={`m-3 rounded-xl border border-white/10 bg-white/[0.035] ${sidebarRecolhida ? 'p-2' : 'p-3'}`}>
@@ -178,7 +188,7 @@ function Navigation({ toggleDarkMode, darkMode, onNovoChamado, sidebarRecolhida,
               </div>
               <Button variant="ghost" size="icon" className="h-9 w-9 text-[#b9c3e3] hover:bg-white/10 hover:text-white" onClick={() => setMenuAberto(false)} aria-label="Fechar menu"><X className="h-5 w-5" /></Button>
             </div>
-            <nav className="flex-1 px-3 py-6"><LinksNavegacao onNavigate={() => setMenuAberto(false)} /></nav>
+            <nav className="flex-1 px-3 py-6"><LinksPlataformas onNavigate={() => setMenuAberto(false)} /></nav>
             <div className="border-t border-white/10 p-3">
               <button onClick={toggleDarkMode} className="app-nav-link flex min-h-11 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-medium">
                 {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
